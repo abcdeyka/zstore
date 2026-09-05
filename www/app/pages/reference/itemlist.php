@@ -1291,25 +1291,37 @@ class ItemList extends \App\Pages\Base
         }
 
         $header['code'] = $item->item_code;
-       
-        $header['term'] =  $post["stdate"];
-        if(strlen($header['term'])==0)  $header['term']  = false;
-        $header['term'] =  $post["stdate"];
+        
+        $months = (int)$item->warranty;
+        if ($months > 0) {
+            $garterm = date('d.m.Y', time() + ($months * 30 * 24 * 60 * 60));
+        } else {
+            $garterm = 'Не визначено';//ваговий товар(оптовий)
+        }
+        $header['garterm'] = $garterm;
+        
         $header['price'] = H::fa($post["stprice"]);
         $header['qty'] = H::fqty($post["stqty"]);
         $header['sum'] = H::fa(doubleval($post["stprice"]) * doubleval( $post["stqty"] ) );
      
+ 
         $price= str_replace(',','.',$header['price'] )  ;
         $qty= str_replace(',','.', $header['qty'] ) ;
    
         $barcode= Item::packStBC($price,$qty,$post["stitemid"]);
         $header['barcode'] = $barcode;
-         
+        
       
         if(intval($user->prtypelabel) == 0) {
             $report = new \App\Report('item_sticker.tpl');
          
-            
+            $header['turn'] = $user->prturn ??'';
+            if($user->prturn == 1) {
+                $header['turn'] = 'transform: rotate(90deg);';
+            }
+            if($user->prturn == 2) {
+                $header['turn'] = 'transform: rotate(-90deg);';
+            }
  
             $generator = new \Picqer\Barcode\BarcodeGeneratorPNG();
             $header['dataUri']  = "data:image/png;base64," . base64_encode($generator->getBarcode($barcode, 'C128'))  ;

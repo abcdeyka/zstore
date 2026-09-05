@@ -39,7 +39,7 @@ class OutcomeMoney extends \App\Pages\Base
         $this->docform->add(new TextInput('document_number'));
         $this->docform->add(new Date('document_date', time()));
 
-        $this->docform->add(new DropDownChoice('detail', array(), 2))->onChange($this, 'OnDetail');
+        $this->docform->add(new DropDownChoice('detail', array(), 0))->onChange($this, 'OnDetail');
         $this->docform->add(new DropDownChoice('mtype', \App\Entity\IOState::getTypeListOutM(),0));
 
         $this->docform->add(new DropDownChoice('contract', array(), 0));

@@ -398,7 +398,39 @@ class GoodsIssue extends \App\Pages\Base
         if (false == \App\ACL::checkShowDoc($this->_doc)) {
             return;
         }
-
+        
+        //автозакрытие заказа самовывоз
+        $delivery = $basedoc->headerdata['delivery'] ?? null;
+        $ocorder  = $basedoc->headerdata['ocorder'] ?? 0;
+        $puorder  = $basedoc->headerdata['puorder'] ?? 0;   // <-- промовский заказ
+        
+        //\App\Helper::log("OC обработка: delivery = {$delivery}, ocorder = {$ocorder}, puorder = {$puorder}");
+        
+        if ($ocorder > 0) {
+            if ($delivery == 1) {
+                // Смена статуса в OC только для самовывоза
+                $modules = \App\System::getOptions("modules");
+                \App\Modules\OCStore\Helper::connect();
+        
+                $elist = [ $ocorder => 5 ]; // 5 — целевой статус самовывоза
+                $data  = json_encode($elist);
+                $fields = [ 'data' => $data ];
+                $url = $modules['ocsite'] . '/index.php?route=api/zstore/updateorder&' 
+                     . \App\System::getSession()->octoken;
+        
+                $json   = \App\Modules\OCStore\Helper::do_curl_request($url, $fields);
+                $result = json_decode($json, true);
+            }
+        }
+        
+        // Автопроводка для заказов с OC и Prom
+        if ($basedocid > 0 && $basedoc->meta_name == 'Order') {
+            if ($ocorder > 0 || $puorder > 0) {
+                // \App\Helper::log("Выполняется автопроводка документа ID {$basedocid}, ocorder={$ocorder}, puorder={$puorder}.");
+                $this->savedocOnClick($this->docform->execdoc);
+            }
+        }
+		
 
     }
 
@@ -827,7 +859,7 @@ class GoodsIssue extends \App\Pages\Base
             if (false == \App\ACL::checkShowReg('GIList', false)) {
                 App::RedirectHome() ;
             } else {
-                App::Redirect("\\App\\Pages\\Register\\GIList", $this->_doc->document_id);
+                App::Redirect("\\App\\Pages\\Register\\OrderList");
             }
 
 

@@ -80,7 +80,7 @@ class OrderList extends \App\Pages\Base
         $this->statuspan->statusform->add(new SubmitButton('bcopy'))->onClick($this, 'statusOnSubmit');
         $this->statuspan->statusform->add(new SubmitButton('bttn'))->onClick($this, 'statusOnSubmit');
         $this->statuspan->statusform->add(new SubmitButton('btask'))->onClick($this, 'statusOnSubmit');
-
+        $this->statuspan->statusform->add(new SubmitButton('bprint'))->onClick($this, 'printlabels', true);
 
         $this->statuspan->statusform->add(new \Zippy\Html\Link\RedirectLink('btopay'));
 
@@ -167,7 +167,7 @@ class OrderList extends \App\Pages\Base
             $row->ispay->setAttribute('class','fa fa-credit-card text-success');            
             $row->ispay->setAttribute('title','Оплачено');            
         }
-        $row->add(new Label('isreserved'))->setVisible($doc->hasReserve());
+        $row->add(new Label('isreserved'))->setVisible($this->docHasReserve($doc));
 
         $stname = Document::getStateName($doc->state);
 
@@ -194,8 +194,8 @@ class OrderList extends \App\Pages\Base
         $row->add(new ClickLink('edit'))->onClick($this, 'editOnClick');
         if ($doc->state < Document::STATE_EXECUTED || $doc->state == Document::STATE_INPROCESS) {
             $row->edit->setVisible(true);
-        } else {
-            $row->edit->setVisible(false);
+       // } else {
+       //     $row->edit->setVisible(false);
         }
         $row->setAttribute('data-did', $doc->document_id);
      
@@ -235,17 +235,63 @@ class OrderList extends \App\Pages\Base
         return $ret;
     }
 
+    /** Резерв саме TAG_RESERV. hasStore() ловить будь-яке проведення (наприклад TAG_SELL). */
+    private function docHasReserve($doc) {
+        if ($doc == null) {
+            return false;
+        }
+        $conn = \ZDB\DB::getConnect();
+        $tag = \App\Entity\Entry::TAG_RESERV;
+        $id  = intval($doc->document_id);
+        return intval($conn->GetOne("select coalesce(count(*),0) from entrylist where tag={$tag} and document_id={$id}")) > 0;
+    }
+
+    /** Стирає всі складські проводки замовлення (резерв, виробництво, старі дублі). */
+    private function clearOrderEntries($docId) {
+        $conn = \ZDB\DB::getConnect();
+        $docId = intval($docId);
+        if ($docId <= 0) {
+            return;
+        }
+        $conn->Execute("delete from entrylist where document_id={$docId}");
+    }
+
+    private function safeUnreserve() {
+        if ($this->_doc == null) {
+            return;
+        }
+        $this->_doc = Document::load($this->_doc->document_id);
+        if ($this->_doc == null) {
+            return;
+        }
+        $this->_doc = $this->_doc->cast();
+        if (method_exists($this->_doc, 'unreserve')) {
+            $this->_doc->unreserve();
+        }
+        $this->clearOrderEntries(intval($this->_doc->document_id));
+    }
+
     public function resOnSubmit($sender) {
+        if ($this->_doc == null) {
+            return;
+        }
+        $this->_doc = Document::load($this->_doc->document_id);
+        $this->_doc = $this->_doc->cast();
+
+        $conn = \ZDB\DB::getConnect();
+        $docId = intval($this->_doc->document_id);
+
         if ($sender->id == "bres") {
             $store = $this->statuspan->resform->store->getValue();
             if($store == 0) {
                 return;
             }
 
-            $conn = \ZDB\DB::getConnect();
             $conn->BeginTrans();
 
             try {
+                $this->clearOrderEntries($docId);
+
                 $this->_doc->headerdata['store'] = $store;
                 $this->_doc->headerdata['storename'] = $this->statuspan->resform->store->getValueName();
                 $this->_doc->save() ;
@@ -265,15 +311,34 @@ class OrderList extends \App\Pages\Base
 
         }
         if ($sender->id == "bunres") {
-
-            $this->_doc->unreserve();
+            $conn->BeginTrans();
+            try {
+                if (method_exists($this->_doc, 'unreserve')) {
+                    $this->_doc->unreserve();
+                }
+                $this->clearOrderEntries($docId);
+                $this->_doc->headerdata['store'] = 0;
+                $this->_doc->headerdata['storename'] = '';
+                $this->_doc->save();
+                $conn->CommitTrans();
+            } catch(\Exception $e) {
+                $this->setError($e->getMessage());
+                $conn->RollbackTrans();
+                return;
+            }
             $this->statuspan->resform->bunres->setVisible(false);
-
+            $this->statuspan->resform->bres->setVisible(true);
+            $this->statuspan->resform->store->setVisible(true);
         }
+        $this->_doc = Document::load($this->_doc->document_id);
+        $this->_doc = $this->_doc->cast();
         $this->listpanel->doclist->Reload(false);
-        $this->statuspan->setVisible(false);    
-        $this->_doc = null;            
-        $this->listpanel->doclist->Reload(false);
+        $this->statuspan->setVisible(true);
+        $this->statuspan->statusform->setVisible(true);
+        $this->statuspan->docview->setDoc($this->_doc);
+        $this->updateStatusButtons();
+        $this->goAnkor('dankor');
+        $this->addJavaScript(" $(\"[data-did={$this->_doc->document_id}]\").addClass( 'table-active') ", true);
     }
 
 
@@ -284,8 +349,6 @@ class OrderList extends \App\Pages\Base
 
         $state = $this->_doc->state;
 
-      
-        
       //проверяем  что есть ТТН
         $list = $this->_doc->getChildren('TTN');
         $ttn = count($list) > 0;
@@ -312,6 +375,7 @@ class OrderList extends \App\Pages\Base
             if ($ttn) {
                 $this->setWarn('У замовлення вже є відправки');
             }
+            $this->safeUnreserve();
             App::Redirect("\\App\\Pages\\Doc\\TTN", 0, $this->_doc->document_id);
             return;
         }
@@ -324,12 +388,14 @@ class OrderList extends \App\Pages\Base
             if ($pos) {
                 $this->setWarn('Вже існує документ Чек');
             }
+            $this->safeUnreserve();
             App::Redirect("\\App\\Pages\\Service\\ARMPos", 0, $this->_doc->document_id);
             return;
         }
 
         if ($sender->id == "bgi") {
 
+            $this->safeUnreserve();
             App::Redirect("\\App\\Pages\\Doc\\GoodsIssue", 0, $this->_doc->document_id);
             return;
         }
@@ -391,7 +457,6 @@ class OrderList extends \App\Pages\Base
                 if($this->_doc->payamount >0 && $this->_doc->payamount>$this->_doc->payed && $gi == false) {
                     $this->setWarn('"Замовлення закрито без оплати"');
                 }
-                                          
                 if($ttn== false && $gi == false && $this->_doc->getHD('dostore',0) ==0) {
                     $this->setWarn('Замовлення закрито без доставки');
                 }
@@ -557,7 +622,7 @@ class OrderList extends \App\Pages\Base
 
         if ($state == Document::STATE_INPROCESS || $state == Document::STATE_FINISHED || $state == Document::STATE_READYTOSHIP) {
             $this->statuspan->resform->setVisible(true);
-            $reserved = $this->_doc->hasReserve();
+            $reserved = $this->docHasReserve($this->_doc);
             $this->statuspan->resform->bres->setVisible(!$reserved);
             $this->statuspan->resform->store->setVisible(!$reserved);
             $this->statuspan->resform->bunres->setVisible($reserved);
@@ -711,7 +776,6 @@ class OrderList extends \App\Pages\Base
                         $this->_tvars['isciprod']=true;  //если хоть один  готов
                     }
 
-                
 
                 }         
                
@@ -775,7 +839,7 @@ class OrderList extends \App\Pages\Base
 
             return;
         }
-        if($doc->hasReserve()) {
+        if($this->docHasReserve($doc)) {
            $doc->setHD('doreserv',1);
         }
         $doc->updateStatus(Document::STATE_CANCELED);
@@ -873,37 +937,159 @@ class OrderList extends \App\Pages\Base
 
     }
 
-    public function addcodeOnClick($sender) {
-        $code = trim($this->editpanel->editform->editbarcode->getText());
+public function addcodeOnClick($sender) {
+    $code = trim($this->editpanel->editform->editbarcode->getText());
+    $code0 = ltrim($code, '0');  // Убираем ведущие нули
 
-        $code0 = ltrim($code, '0');
+    $this->editpanel->editform->editbarcode->setText('');
+    if ($code == '') return;
 
-        $this->editpanel->editform->editbarcode->setText('');
-        if ($code == '') {
-            return;
-        }
+    // Разделение штрих-кода на item_id и quantity
+    $itemId = $code;
+    $quantityFromBarcode = 1;
 
-        foreach ($this->_itemlist as $ri => $_item) {
-            if ($_item->bar_code == $code || $_item->item_code == $code || $_item->bar_code == $code0 || $_item->item_code == $code0) {
-                if($this->_itemlist[$ri]->checkedqty ==  $this->_itemlist[$ri]->quantity) {
-                    $this->setWarn('Лишній товар') ;
-                    $this->addJavaScript("new Audio('/assets/error.mp3').play()", true);
-                               
+    if (strpos($code, '-') !== false) {
+        list($itemId, $quantityFromBarcode) = explode('-', $code);
+        $quantityFromBarcode = floatval($quantityFromBarcode);
+    }
+
+    foreach ($this->_itemlist as $_item) {
+        if ($_item->item_id == $itemId || $_item->bar_code == $code || $_item->bar_code == $code0 || $_item->item_code == $code || $_item->item_code == $code0) {
+
+            $itemName = $_item->itemname ?? 'Товар';
+
+            if ($_item->isweight == 1) {
+                if ($_item->checkedqty + $quantityFromBarcode > $_item->quantity) {
+                    $this->setError("Лишній ваговий товар: $itemName");
                     return;
                 }
-                $this->_itemlist[$ri]->checkedqty += 1;
-                if($this->_itemlist[$ri]->checkedqty ==  $this->_itemlist[$ri]->quantity) {
-                    $this->_itemlist[$ri]->checked = true;
+                $_item->checkedqty += $quantityFromBarcode;
+
+                $remaining = $_item->quantity - $_item->checkedqty;
+                if ($remaining > 0) {
+                    $this->setInfo("$itemName додано. Залишилось додати: $remaining");
                 }
 
-                $this->editpanel->editform->edititemlist->Reload();
-                $this->addJavaScript("new Audio('/assets/good.mp3').play()", true);
+            } else {
+                if ($_item->checkedqty >= $_item->quantity) {
+                    $this->setError("Лишній штучний товар: $itemName");
+                    return;
+                }
+                $_item->checkedqty += 1;
 
-                return;
+                $remaining = $_item->quantity - $_item->checkedqty;
+                if ($remaining > 0) {
+                    $this->setInfo("$itemName додано. Залишилось додати: $remaining");
+                }
+            }
+
+            $_item->checked = ($_item->checkedqty == $_item->quantity);
+
+            if ($_item->checked) {
+                $this->setSuccess("$itemName повністю зібрано");
+            }
+
+            // Обновляем список товаров
+            $this->editpanel->editform->edititemlist->Reload();
+
+            // Пауза 0.3 сек после уведомления
+            $this->addJavaScript("
+                setTimeout(function(){}, 300);
+            ");
+
+            // Проверяем, все ли позиции собраны
+            if ($this->areAllItemsCollected()) {
+                $this->setSuccess('Всі позиції зібрані');
+                $this->addJavaScript("
+                    setTimeout(function() {
+                        $('#editready').click();
+                    }, 300);
+                ");
+            }
+
+            return;
+        }
+    }
+
+    $this->setWarn('Товар не знайдено');
+}
+
+
+
+	public function areAllItemsCollected() {
+		foreach ($this->_itemlist as $_item) {
+			if ($_item->checked != true) {
+				return false;
+			}
+		}
+		
+
+        $deliveryStatus = $this->_doc->headerdata['delivery'] ?? '';
+        $ocorder = $this->_doc->headerdata['ocorder'] ?? 0;
+        
+        // Получаем параметры модулей
+        $modules = System::getOptions("modules");
+        
+        // Маппинг delivery => OC статус ID
+        $ocStatusMap = [
+            1 => 14, // Самовывоз
+            2 => 16,
+            3 => 16,
+            4 => 16,
+            5 => 16,
+            7 => 16
+        ];
+        
+        // Логирование (отключено)
+        // \App\Helper::log('Delivery Status ID: ' . $deliveryStatus);
+        // \App\Helper::log('OC Order: ' . $ocorder);
+        
+        // Если заказ связан с OC и есть подходящий статус
+        if ($ocorder > 0 && isset($ocStatusMap[$deliveryStatus])) {
+            $ocStatusId = $ocStatusMap[$deliveryStatus];
+            $statusMessage = ($deliveryStatus == 1)
+                ? 'Очікує у пункті самовивозу'
+                : 'Запакований та чекає відправки';
+        
+            // \App\Helper::log("Обновление OC заказа $ocorder на статус ID: $ocStatusId ({$statusMessage})");
+        
+            \App\Modules\OCStore\Helper::connect();
+        
+            $elist = [ $ocorder => $ocStatusId ];
+            $data = json_encode($elist);
+        
+            $fields = [ 'data' => $data ];
+            $url = $modules['ocsite'] . '/index.php?route=api/zstore/updateorder&' . System::getSession()->octoken;
+        
+            $json = \App\Modules\OCStore\Helper::do_curl_request($url, $fields);
+            $data = json_decode($json, true);
+        
+            if (!empty($data['error'])) {
+                $data['error'] = str_replace("'", "`", $data['error']);
+                $this->setErrorTopPage($data['error']);
+                // \App\Helper::log('Ошибка обновления OC статуса: ' . $data['error']);
+            } else {
+                $this->setSuccess("OC статус оновлено: {$statusMessage}");
+                // \App\Helper::log("OC статус успешно обновлён для заказа $ocorder: {$statusMessage} (ID: $ocStatusId)");
             }
         }
-        $this->setWarn('Товар не знайдено') ;
-        $this->addJavaScript("new Audio('/assets/error.mp3').play()", true);
+        
+        // Действия по статусу доставки
+        if ($deliveryStatus == 1) {
+            if (intval($this->_doc->headerdata['store'] ?? 0) == 0) {
+                $sid = H::getDefStore();
+                $this->_doc->headerdata['store'] = $sid;
+                $st = \App\Entity\Store::load($sid);
+                $this->_doc->headerdata['storename'] = $st ? $st->storename : '';
+                $this->_doc->save();
+            }
+            $this->_doc->cast()->reserve();
+        } else {
+            $this->safeUnreserve();
+            App::Redirect("\\App\\Pages\\Doc\\GoodsIssue", 0, $this->_doc->document_id);
+        }
+        
+        return true;
 
 
     }
@@ -1184,6 +1370,245 @@ class OrderList extends \App\Pages\Base
 
     }
 
+    /**
+     * Друк етикеток під розлив.
+     *
+     * remaining = фізичний − qty_замовлення
+     * deficit   = скільки розлити, щоб закрити замовлення
+     * якщо remaining < minqty → долити до recom (або до minqty, якщо recom порожній)
+     * комплектуючі (ItemSet) ріжуть тираж; наклейка/флакон ліміт не ставлять
+     *
+     * Зарезервоване: getQuantity() вже без qty. Автооприбуткування = додатні TAG_RESERV.
+     * Ваговий: шматки по 1000, штрих-код item_id-qty, без min/recom.
+     */
+    public function printlabels($sender) {
+
+        $items = [];
+        $storeId = 32;         // основний склад
+        $componentStore = 32;
+        $reserved = $this->docHasReserve($this->_doc);
+
+        $partPool = [];
+
+        foreach ($this->_doc->unpackDetails('detaildata') as $it) {
+
+            $cat = \App\Entity\Item::load($it->item_id);
+            if ($cat == null) {
+                continue;
+            }
+
+            if (intval($cat->noprint) == 1) {
+                continue;
+            }
+
+            $orderQty = doubleval($it->quantity);
+            if ($orderQty <= 0) {
+                continue;
+            }
+
+            if (intval($cat->isweight) == 1) {
+                $left = $orderQty;
+                while ($left > 1000) {
+                    $item = clone $it;
+                    $item->quantity = 1000;
+                    $item->printqty = 1;
+                    $item->bar_code = $item->item_id . "-" . sprintf("%02d", $item->quantity);
+                    $items[] = $item;
+                    $left -= 1000;
+                }
+                if ($left > 0) {
+                    $item = clone $it;
+                    $item->quantity = $left;
+                    $item->printqty = 1;
+                    $item->bar_code = $item->item_id . "-" . sprintf("%02d", $item->quantity);
+                    $items[] = $item;
+                }
+                continue;
+            }
+
+            $stock = doubleval($cat->getQuantity($storeId));
+            $autoQty = $reserved ? $this->getAutoIncomeQty($cat->item_id) : 0;
+            $fromShelf = $reserved ? max(0, $orderQty - $autoQty) : 0;
+            $physicalNow = $stock + $fromShelf;
+
+            $remaining = $physicalNow - $orderQty;
+            $deficit = max(0, -$remaining);
+            $remainingAfter = max(0, $remaining);
+
+            $minQty = doubleval($cat->minqty);
+            $recom = $this->getRecomQty($cat);
+
+            $buffer = 0;
+            if ($minQty > 0 && $remainingAfter < $minQty) {
+                $target = $recom > 0 ? $recom : $minQty;
+                $buffer = max(0, $target - $remainingAfter);
+            }
+
+            $desired = $deficit + $buffer;
+            if ($desired <= 0) {
+                H::log("Етикетки {$cat->itemname}: склад покриває, remaining={$remainingAfter}");
+                continue;
+            }
+
+            $canMake = $this->canMakeFromBom($cat->item_id, $componentStore, $partPool);
+            $toPrint = $desired;
+            if ($canMake !== null) {
+                if ($canMake <= 0) {
+                    H::log("Етикетки {$cat->itemname}: немає комплектуючих, треба {$desired}");
+                    continue;
+                }
+                if ($toPrint > $canMake) {
+                    H::log("Етикетки {$cat->itemname}: треба {$desired}, комплектуючих на {$canMake}");
+                    $toPrint = $canMake;
+                }
+                $this->takeBom($cat->item_id, $toPrint, $componentStore, $partPool);
+            }
+
+            $item = clone $it;
+            $item->quantity = $toPrint;
+            $item->printqty = $toPrint;
+            $item->bar_code = $cat->bar_code;
+            $items[] = $item;
+
+            H::log("Етикетки {$cat->itemname} qty={$toPrint} (дефіцит={$deficit} буфер={$buffer})");
+        }
+
+        if (empty($items)) {
+            $this->addAjaxResponse("toastr.warning('Нема данних для друку')");
+            return;
+        }
+
+        $user = \App\System::getUser();
+        $ret = H::printItems($items);
+
+        if (intval($user->prtypelabel) === 0) {
+            if ($user->usemobileprinter == 1) {
+                \App\Session::getSession()->printform = $ret;
+                $this->addAjaxResponse("window.open('/index.php?p=App/Pages/ShowReport&arg=print')");
+            } else {
+                $this->addAjaxResponse("$('#tag').html('{$ret}'); $('#pform').modal()");
+            }
+        }
+
+        try {
+            $buf = null;
+            if (intval($user->prtypelabel) === 1 && strlen($ret) > 0) {
+                $buf = \App\Printer::xml2comm($ret);
+            } elseif (intval($user->prtypelabel) === 2 && count($ret) > 0) {
+                $buf = \App\Printer::arr2comm($ret);
+            }
+            if ($buf !== null) {
+                $this->addAjaxResponse("sendPSlabel('" . json_encode($buf) . "')");
+            }
+        } catch (\Exception $e) {
+            $msg = str_replace([";", "'"], "`", $e->getMessage());
+            $this->addAjaxResponse("toastr.error('{$msg}')");
+        }
+    }
+
+    /** Рекомендована кількість з кастомного поля `recom`. */
+    private function getRecomQty($item) {
+        if (method_exists($item, 'getcf')) {
+            $cfs = $item->getcf(true);
+            if (is_array($cfs)) {
+                foreach ($cfs as $k => $v) {
+                    $code = is_object($v) ? ($v->code ?? '') : $k;
+                    $val = is_object($v) ? ($v->val ?? 0) : $v;
+                    if ($code === 'recom') {
+                        return doubleval($val);
+                    }
+                }
+            }
+        }
+        $raw = $item->cflist ?? '';
+        if (is_string($raw) && $raw !== '') {
+            $cf = @unserialize($raw);
+            if (is_array($cf) && isset($cf['recom'])) {
+                return doubleval($cf['recom']);
+            }
+        }
+        if (!empty($item->detail) && is_string($item->detail)) {
+            if (preg_match('/<cflist><!\[CDATA\[(.*?)\]\]><\/cflist>/s', $item->detail, $m)
+                || preg_match('/<cflist>(.*?)<\/cflist>/s', $item->detail, $m)) {
+                $cf = @unserialize($m[1]);
+                if (is_array($cf) && isset($cf['recom'])) {
+                    return doubleval($cf['recom']);
+                }
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * Скільки Zippy оприбуткувала при резерві.
+     * Додатні проводки TAG_RESERV по цьому товару в цьому документі.
+     */
+    private function getAutoIncomeQty($itemId) {
+        $conn = \ZDB\DB::getConnect();
+        $docId = intval($this->_doc->document_id);
+        $itemId = intval($itemId);
+        $tag = \App\Entity\Entry::TAG_RESERV;
+        $sql = "SELECT COALESCE(SUM(e.quantity),0)
+                FROM entrylist e
+                JOIN store_stock s ON e.stock_id = s.stock_id
+                WHERE e.document_id = {$docId}
+                  AND e.tag = {$tag}
+                  AND s.item_id = {$itemId}
+                  AND e.quantity > 0";
+        return doubleval($conn->GetOne($sql));
+    }
+
+    private function isIgnorablePart($name) {
+        $n = mb_strtolower($name);
+        return (mb_strpos($n, 'наклейка') !== false) || (mb_strpos($n, 'флакон') !== false);
+    }
+
+    /**
+     * Максимум з поточних залишків комплектуючих.
+     * null = комплектації немає, не обмежуємо.
+     */
+    private function canMakeFromBom($itemId, $componentStore, &$partPool) {
+        $parts = \App\Entity\ItemSet::find("pitem_id=" . intval($itemId));
+        if (!is_array($parts) && !($parts instanceof \Traversable)) {
+            return null;
+        }
+
+        $limit = null;
+        foreach ($parts as $part) {
+            $pi = \App\Entity\Item::load($part->item_id);
+            if (!$pi || doubleval($part->qty) <= 0) {
+                continue;
+            }
+            if ($this->isIgnorablePart($pi->itemname)) {
+                continue;
+            }
+            $pid = intval($pi->item_id);
+            if (!isset($partPool[$pid])) {
+                $partPool[$pid] = doubleval($pi->getQuantity($componentStore));
+            }
+            $can = floor($partPool[$pid] / doubleval($part->qty));
+            $limit = $limit === null ? $can : min($limit, $can);
+        }
+        return $limit;
+    }
+
+    private function takeBom($itemId, $toPrint, $componentStore, &$partPool) {
+        $parts = \App\Entity\ItemSet::find("pitem_id=" . intval($itemId));
+        foreach ($parts as $part) {
+            $pi = \App\Entity\Item::load($part->item_id);
+            if (!$pi || doubleval($part->qty) <= 0) {
+                continue;
+            }
+            if ($this->isIgnorablePart($pi->itemname)) {
+                continue;
+            }
+            $pid = intval($pi->item_id);
+            if (!isset($partPool[$pid])) {
+                $partPool[$pid] = doubleval($pi->getQuantity($componentStore));
+            }
+            $partPool[$pid] -= doubleval($part->qty) * $toPrint;
+        }
+    }
 
 }
 

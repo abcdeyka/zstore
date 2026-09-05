@@ -94,50 +94,85 @@
                     {{/usescanner}}
                     &nbsp; <a zippy="addrow" class="btn  btn-primary">Додати ТМЦ</a>
 
-                    <table class="table table-sm mt-2">
-                        <tr>
-                            <th> <i onclick=" $('.seldel').prop('checked', $('.seldel').prop('checked') == false);"
-                                style="width:30px;cursor:pointer" title="Зняти/виставити прапорець"
-                                    class="fa fa-check-double "></i></th>
-                            <th> <a zippy="sortname">Назва</a> </th>
-                            <th><a zippy="sortcode">Артикул</a></th>
 
-                           <th>{{#usesnumber}}Серія, дата{{/usesnumber}}</th>
-                           <th width="40"  class="text-end" >Кiл. </th> 
+<style>
+    .table-middle th,
+    .table-middle td {
+        vertical-align: middle;
+    }
+</style>
 
-                            <th width="40" class="text-center">Факт. кіл.</th>
+<table class="table table-sm mt-2 table-middle">
+    <tr>
+        <th>
+            <i onclick="$('.seldel').prop('checked', $('.seldel').prop('checked') == false);"
+               style="width:30px;cursor:pointer"
+               title="Зняти/виставити прапорець"
+               class="fa fa-check-double"></i>
+        </th>
+
+        <th>
+            <a zippy="sortname">Назва</a>
+        </th>
+
+        <th>
+            <a zippy="sortcode">Артикул</a>
+        </th>
+
+        <th>
+            {{#usesnumber}}Серія, дата{{/usesnumber}}
+        </th>
+
+        <th width="40" class="text-right">
+            Кiл.
+        </th>
+
+        <th width="40" class="text-center">
+            Факт. кіл.
+        </th>
+    </tr>
+
+    <tr zippy="detail">
+        <td>
+            <input tabindex="-1"
+                   zippy="seldel"
+                   class="seldel"
+                   type="checkbox">
+        </td>
+
+        <td zippy="item"></td>
+
+        <td zippy="item_code"></td>
+
+        <td>
+            <span zippy="snumber"></span>
+            <span zippy="sdate"></span>
+        </td>
+
+        <td zippy="quantity" class="text-right"></td>
+
+        <td class="text-center">
+            <input class="form-control qtyprice"
+                   pattern="[0-9,\.]+"
+                   style="width:100px;"
+                   zippy="qfact">
+        </td>
+    </tr>
+
+    <tr>
+        <td>
+            <a class="text-danger"
+               zippy="delall"
+               title="Видалити">
+                <i class="fa fa-trash"></i>
+            </a>
+        </td>
+
+        <td colspan="4"></td>
+    </tr>
+</table>
 
 
-
-                        </tr>
-                        <tr zippy="detail">
-                            <td><input tabindex="-1"  zippy="seldel" class="seldel" type="checkbox"></td>
-                     
-                            <td    zippy="item"></td>
-                            <td    zippy="item_code"></td>
-
-                              <td ><span zippy="snumber"></span> <span zippy="sdate" ></span> </td>
-                        
-                             <td   zippy="quantity"  class="text-end" ></td> 
-
-                            <td  >
-                                <input class="form-control form-control-sm qtyprice"   pattern="[0-9,\.]+" style="width:100px;" zippy="qfact">
-
-                            </td>
-
-
-
-
-                        </tr>
-                         
-                        <tr><td >
-                            <a class="text-danger" zippy="delall" title="Видалити"><i class="fa fa-trash"></i></a>
-                          </td> 
-                         <td colspan="4"></td>   
-                         
-                            </tr>                 
-                       
-                    </table>
 
 
                 </div>
@@ -219,7 +254,13 @@
             $("#edititem").focus()   
         });
 
-     
+        function onBarCode(ele) {
+
+            if (event.key === 'Enter' || event.keyCode == 13) {
+                // alert($('#barcode').val());
+                $('#addcode').click()
+            }
+        }
 
         function check_loadall(ele) {
             document.getElementById('dialogwait').showModal()

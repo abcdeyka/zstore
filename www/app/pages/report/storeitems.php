@@ -19,333 +19,725 @@ use Zippy\Html\Link\RedirectLink;
 use Zippy\Html\Panel;
 
 /**
- * Состояние  складов
+ * Состояние складов
  */
 class StoreItems extends \App\Pages\Base
 {
     public function __construct() {
         parent::__construct();
+
         if (false == \App\ACL::checkShowReport('StoreItems')) {
             return;
         }
 
         $this->add(new Form('filter'))->onSubmit($this, 'OnSubmit');
+
         $this->filter->add(new CheckBox('fminus'));
         $this->filter->add(new CheckBox('fmin'));
         $this->filter->add(new CheckBox('fver'));
- 
         $this->filter->add(new CheckBox('fcust'));
-        $this->filter->add(new DropDownChoice('searchcat', Category::getList(), 0));
- 
+
+        // Показывать все, включая нулевые
+        $this->filter->add(new CheckBox('fall'));
+
+        // Категория
+        $this->filter->add(
+            new DropDownChoice('searchcat', Category::getList(), 0)
+        );
+
+        // Поиск по названию / артикулу
+        $this->filter->add(new TextInput('searchkey'));
 
         $this->add(new Panel('detail'))->setVisible(false);
 
         $this->detail->add(new Label('preview'));
+
         \App\Session::getSession()->issubmit = false;
     }
 
 
-
+    /**
+     * Обработка фильтра
+     */
     public function OnSubmit($sender) {
 
-
         $this->detail->setVisible(true);
+
         $fver = $this->filter->fver->isChecked();
-  
-        $html = $fver ? $this->generateReportVer() : $this->generateReport();
-        \App\Session::getSession()->printform = "<html><head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\"></head><body>" . $html . "</body></html>";
+
+        $html = $fver
+            ? $this->generateReportVer()
+            : $this->generateReport();
+
+        \App\Session::getSession()->printform =
+            "<html><head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\"></head><body>"
+            . $html .
+            "</body></html>";
+
         $this->detail->preview->setText($html, true);
-
-        // $this->addJavaScript("loadRep()",true) ;
-
     }
 
+
+    /**
+     * Обычный режим
+     */
     private function generateReport() {
+
         $common = \App\System::getOptions('common');
-   
-        $fmin = $this->filter->fmin->isChecked();
-        $fminus = $this->filter->fminus->isChecked();
-        $fcust = $this->filter->fcust->isChecked();
+
+        $fmin     = $this->filter->fmin->isChecked();
+        $fminus   = $this->filter->fminus->isChecked();
+        $fcust    = $this->filter->fcust->isChecked();
+        $fall     = $this->filter->fall->isChecked();
+
         $fcat = $this->filter->searchcat->getValue();
 
-        $where = 'disabled<>1 '  ;
-        if($fcat > 0) {
-            $cat= \App\Entity\Category::load($fcat);
-            $cats= $cat->getChildren();
-            $cats[]= $fcat;
-            $where .= 'and cat_id in ('. implode(',',$cats)  .') '  ;
-                   
+        // Поиск
+        $searchkey = trim($this->filter->searchkey->getText());
+
+
+        // ---------------------------------------------------------
+        // ФИЛЬТР ТОВАРОВ
+        // ---------------------------------------------------------
+
+        $where = 'disabled<>1 ';
+
+
+        // ---------------------------------------------------------
+        // ФИЛЬТР ПО КАТЕГОРИИ
+        // ---------------------------------------------------------
+
+        if ($fcat > 0) {
+
+            $cat = \App\Entity\Category::load($fcat);
+
+            $cats = $cat->getChildren();
+
+            $cats[] = $fcat;
+
+            $where .= 'and cat_id in (' . implode(',', $cats) . ') ';
         }
 
-        $itemlist = Item::find($where, 'itemname asc') ;
-        $storelist = Store::getList() ;
 
-        if(\App\System::getUser()->showotherstores) {
-            $storelist = Store::getListAll() ;
+        // ---------------------------------------------------------
+        // ПОИСК ПО НАЗВАНИЮ И АРТИКУЛУ
+        // ---------------------------------------------------------
 
+        if (strlen($searchkey) > 0) {
+
+            $search = Item::qstr('%' . $searchkey . '%');
+
+            $where .= "and (
+                itemname like " . $search . "
+                or item_code like " . $search . "
+            ) ";
         }
+
+
+        // ---------------------------------------------------------
+        // ТОВАРЫ
+        // ---------------------------------------------------------
+
+        $itemlist = Item::find($where, 'itemname asc');
+
+
+        // ---------------------------------------------------------
+        // СКЛАДЫ
+        // ---------------------------------------------------------
+
+        $storelist = Store::getList();
+
+        if (\App\System::getUser()->showotherstores) {
+            $storelist = Store::getListAll();
+        }
+
+
+        // ---------------------------------------------------------
+        // ОСТАТКИ
+        // ---------------------------------------------------------
+
         $siqty = array();
+
         $stlist = array();
-      
-        $cflist = $common['cflist']??[]   ;
-        if($fcust==false)  {
-            $cflist=[];
+
+
+        // ---------------------------------------------------------
+        // КАСТОМНЫЕ ПОЛЯ
+        // ---------------------------------------------------------
+
+        $cflist = $common['cflist'] ?? [];
+
+        if ($fcust == false) {
+            $cflist = [];
         }
 
-        $cfnames=[];
-        foreach($cflist as $c)  {
-           $cfnames[]=$c->name; 
+        $cfnames = [];
+
+        foreach ($cflist as $c) {
+            $cfnames[] = $c->name;
         }
-        
+
+
+        // ---------------------------------------------------------
+        // ЗАГРУЗКА ОСТАТКОВ
+        // ---------------------------------------------------------
+
         $conn = \ZDB\DB::getConnect();
 
+        $rs = $conn->Execute("
+            select
+                store_id,
+                item_id,
+                coalesce(sum(qty), 0) as qty
+            from store_stock_view
+            where itemdisabled<>1
+            group by store_id, item_id
+        ");
 
-        $rs = $conn->Execute("select store_id, item_id, coalesce(sum(qty) ,0) as qty from store_stock_view where   itemdisabled<>1 group  by store_id,item_id    ") ;
 
         foreach ($rs as $row) {
-            $qty = doubleval($row['qty']) ;
 
-            $siqty[$row['store_id'].'_'.$row['item_id']] = $qty;
+            $qty = doubleval($row['qty']);
 
+            $siqty[
+                $row['store_id'] . '_' . $row['item_id']
+            ] = $qty;
         }
 
 
+        // ---------------------------------------------------------
+        // ФОРМИРОВАНИЕ ДЕТАЛЕЙ
+        // ---------------------------------------------------------
+
         $detail = array();
+
 
         foreach ($itemlist as $item) {
 
             $r = array();
-            $r['itemname']  =  $item->itemname;
-            $r['item_code']  =  $item->item_code;
-            $r['brand']  =  $item->manufacturer;
-            $r['minqty']  =  $item->minqty>0 ? H::fqty($item->minqty) : '';
 
-            
-            
-            
+            $r['itemname'] = $item->itemname;
+
+            $r['item_code'] = $item->item_code;
+
+            $r['brand'] = $item->manufacturer;
+
+            $r['minqty'] =
+                $item->minqty > 0
+                ? H::fqty($item->minqty)
+                : '';
+
+
             $flag = true;
-            $r['stlistcol']  =  array() ;
-           
-            foreach($storelist as $store_id=>$storename) {
 
-                $qty =  $siqty[$store_id.'_'.$item->item_id] ?? 0;
-                if(strlen($qty)==0) {
-                    $qty=0;
+            $r['stlistcol'] = array();
+
+
+            // -----------------------------------------------------
+            // ОСТАТКИ ПО СКЛАДАМ
+            // -----------------------------------------------------
+
+            foreach ($storelist as $store_id => $storename) {
+
+                $qty =
+                    $siqty[
+                        $store_id . '_' . $item->item_id
+                    ] ?? 0;
+
+
+                if (strlen($qty) == 0) {
+                    $qty = 0;
                 }
 
-                if($fminus) {
-                    if($qty <0) {
+
+                // -------------------------------------------------
+                // В МИНУСЕ
+                // -------------------------------------------------
+
+                if ($fminus) {
+
+                    if ($qty < 0) {
                         $flag = false;
                     }
-
                 }
-                if($fmin && $item->minqty>0) {
-                    if($qty < $item->minqty) {
+
+
+                // -------------------------------------------------
+                // МЕНЬШЕ МИНИМАЛЬНОГО
+                // -------------------------------------------------
+
+                if ($fmin && $item->minqty > 0) {
+
+                    if ($qty < $item->minqty) {
                         $flag = false;
                     }
-
-
                 }
 
-                if(!$fminus && !$fmin) {
-                    if($qty >0) {
+
+                // -------------------------------------------------
+                // ОБЫЧНЫЙ РЕЖИМ
+                // -------------------------------------------------
+
+                if (!$fminus && !$fmin) {
+
+                    if ($qty > 0) {
                         $flag = false;
                     }
-
-
                 }
-                $r['stlistcol'][]=array('qty'=>H::fqty($qty)) ;
 
 
+                $r['stlistcol'][] = array(
+                    'qty' => H::fqty($qty)
+                );
             }
 
-            if($flag) {
+
+            // -----------------------------------------------------
+            // ЕСЛИ НЕ ВЫБРАНО "ВСІ"
+            // -----------------------------------------------------
+
+            if ($flag && !$fall) {
                 continue;
-            } //все  нули
-            
-            
-            $r['cfcol']  =  array() ;
-
-            foreach($cfnames as $fn)  {
-              foreach($item->getcf() as $f)  {
-                 if($fn===$f->name)  {
-                     $r['cfcol'][]=array('val'=>$f->val) ;
-                 }
-              }
             }
-            
-            
-            $detail[] = $r;
 
+
+            // -----------------------------------------------------
+            // КАСТОМНЫЕ ПОЛЯ
+            // -----------------------------------------------------
+
+            $r['cfcol'] = array();
+
+
+            foreach ($cfnames as $fn) {
+
+                foreach ($item->getcf() as $f) {
+
+                    if ($fn === $f->name) {
+
+                        $r['cfcol'][] = array(
+                            'val' => $f->val
+                        );
+                    }
+                }
+            }
+
+
+            $detail[] = $r;
         }
 
-        $colspan=4;
+
+        // ---------------------------------------------------------
+        // COLSPAN
+        // ---------------------------------------------------------
+
+        $colspan = 4;
+
         $colspan += count($storelist);
+
         $colspan += count($cfnames);
-     
-        $header = array(  
-                         "date"=>H::fd(time()),
-                         "ver"=>false ,
-                         "colspan"=>$colspan ,
-                         "cfnames"=>\App\Util::tokv($cfnames) ,
-                        "_detail"       => $detail,
-                        "storescol"         => \App\Util::tokv($storelist)
+
+
+        // ---------------------------------------------------------
+        // HEADER
+        // ---------------------------------------------------------
+
+        $header = array(
+            "date" => H::fd(time()),
+
+            "ver" => false,
+
+            "colspan" => $colspan,
+
+            "cfnames" =>
+                \App\Util::tokv($cfnames),
+
+            "_detail" =>
+                $detail,
+
+            "storescol" =>
+                \App\Util::tokv($storelist)
         );
 
-        $report = new \App\Report('report/storeitems.tpl');
 
-        $html = $report->generate($header);
+        // ---------------------------------------------------------
+        // ОТЧЁТ
+        // ---------------------------------------------------------
 
-        return $html;
+        $report =
+            new \App\Report('report/storeitems.tpl');
+
+
+        return $report->generate($header);
     }
 
-  
-  private function generateReportVer() {
+
+    /**
+     * Вертикальный режим
+     */
+    private function generateReportVer() {
+
         $common = \App\System::getOptions('common');
-   
-        $fmin = $this->filter->fmin->isChecked();
-        $fminus = $this->filter->fminus->isChecked();
-        $fcust = $this->filter->fcust->isChecked();
-        $fcat = $this->filter->searchcat->getValue();
 
-        $where = 'disabled<>1 '  ;
-        if($fcat > 0) {
-            $cat= \App\Entity\Category::load($fcat);
-            $cats= $cat->getChildren();
-            $cats[]= $fcat;
-            $where .= 'and cat_id in ('. implode(',',$cats)  .') '  ;
-                   
-        }    
 
-        $itemlist = Item::find($where, 'itemname asc') ;
-        $storelist = Store::getList() ;
+        $fmin =
+            $this->filter->fmin->isChecked();
 
-        if(\App\System::getUser()->showotherstores) {
-            $storelist = Store::getListAll() ;
+        $fminus =
+            $this->filter->fminus->isChecked();
 
+        $fcust =
+            $this->filter->fcust->isChecked();
+
+
+        $fcat =
+            $this->filter->searchcat->getValue();
+
+
+        // ---------------------------------------------------------
+        // ПОИСК
+        // ---------------------------------------------------------
+
+        $searchkey =
+            trim($this->filter->searchkey->getText());
+
+
+        // ---------------------------------------------------------
+        // ФИЛЬТР
+        // ---------------------------------------------------------
+
+        $where = 'disabled<>1 ';
+
+
+        // ---------------------------------------------------------
+        // КАТЕГОРИЯ
+        // ---------------------------------------------------------
+
+        if ($fcat > 0) {
+
+            $cat =
+                \App\Entity\Category::load($fcat);
+
+            $cats =
+                $cat->getChildren();
+
+            $cats[] =
+                $fcat;
+
+            $where .=
+                'and cat_id in (' .
+                implode(',', $cats) .
+                ') ';
         }
+
+
+        // ---------------------------------------------------------
+        // ПОИСК ПО НАЗВАНИЮ / АРТИКУЛУ
+        // ---------------------------------------------------------
+
+        if (strlen($searchkey) > 0) {
+
+            $search =
+                Item::qstr('%' . $searchkey . '%');
+
+            $where .= "and (
+                itemname like " . $search . "
+                or item_code like " . $search . "
+            ) ";
+        }
+
+
+        // ---------------------------------------------------------
+        // ТОВАРЫ
+        // ---------------------------------------------------------
+
+        $itemlist =
+            Item::find($where, 'itemname asc');
+
+
+        // ---------------------------------------------------------
+        // СКЛАДЫ
+        // ---------------------------------------------------------
+
+        $storelist =
+            Store::getList();
+
+        if (\App\System::getUser()->showotherstores) {
+
+            $storelist =
+                Store::getListAll();
+        }
+
+
+        // ---------------------------------------------------------
+        // ОСТАТКИ
+        // ---------------------------------------------------------
+
         $siqty = array();
+
         $stlist = array();
-      
-        $cflist = $common['cflist']??[]   ;
-        if($fcust==false)  {
-            $cflist=[];
+
+
+        // ---------------------------------------------------------
+        // КАСТОМНЫЕ ПОЛЯ
+        // ---------------------------------------------------------
+
+        $cflist =
+            $common['cflist'] ?? [];
+
+
+        if ($fcust == false) {
+            $cflist = [];
         }
 
-        $cfnames=[];
-        foreach($cflist as $c)  {
-           $cfnames[]=$c->name; 
+
+        $cfnames = [];
+
+
+        foreach ($cflist as $c) {
+            $cfnames[] =
+                $c->name;
         }
-        
-        $conn = \ZDB\DB::getConnect();
 
 
-        $rs = $conn->Execute("select store_id, item_id, coalesce(sum(qty) ,0) as qty from store_stock_view where   itemdisabled<>1 group  by store_id,item_id    ") ;
+        // ---------------------------------------------------------
+        // ЗАГРУЗКА ОСТАТКОВ
+        // ---------------------------------------------------------
+
+        $conn =
+            \ZDB\DB::getConnect();
+
+
+        $rs = $conn->Execute("
+            select
+                store_id,
+                item_id,
+                coalesce(sum(qty), 0) as qty
+            from store_stock_view
+            where itemdisabled<>1
+            group by store_id, item_id
+        ");
+
 
         foreach ($rs as $row) {
-            $qty = doubleval($row['qty']) ;
 
-            $siqty[$row['store_id'].'_'.$row['item_id']] = $qty;
+            $qty =
+                doubleval($row['qty']);
 
+            $siqty[
+                $row['store_id'] .
+                '_' .
+                $row['item_id']
+            ] = $qty;
         }
 
+
+        // ---------------------------------------------------------
+        // ФОРМИРОВАНИЕ ОТЧЁТА
+        // ---------------------------------------------------------
 
         $detail = array();
 
-        foreach ($storelist as   $store_id=>$storename) {
-          $detailitems = array();  
-          foreach ($itemlist as $item) {
 
-            $r = array();
-            $r['itemname']  =  $item->itemname;
-            $r['item_code']  =  $item->item_code;
-            $r['brand']  =  $item->manufacturer;
-            $r['minqty']  =  $item->minqty>0 ? H::fqty($item->minqty) : '';
+        foreach ($storelist as $store_id => $storename) {
 
-            
-            
-            
-            $flag = true;
-            $r['qty']  =  0 ;
-           
-           
-                $qty =  $siqty[$store_id.'_'.$item->item_id] ?? 0;
-                if(strlen($qty)==0) {
-                    $qty=0;
+            $detailitems = array();
+
+
+            foreach ($itemlist as $item) {
+
+                $r = array();
+
+                $r['itemname'] =
+                    $item->itemname;
+
+                $r['item_code'] =
+                    $item->item_code;
+
+                $r['brand'] =
+                    $item->manufacturer;
+
+                $r['minqty'] =
+                    $item->minqty > 0
+                    ? H::fqty($item->minqty)
+                    : '';
+
+
+                $flag = true;
+
+                $r['qty'] = 0;
+
+
+                // -------------------------------------------------
+                // ОСТАТОК
+                // -------------------------------------------------
+
+                $qty =
+                    $siqty[
+                        $store_id .
+                        '_' .
+                        $item->item_id
+                    ] ?? 0;
+
+
+                if (strlen($qty) == 0) {
+                    $qty = 0;
                 }
 
-                if($fminus) {
-                    if($qty <0) {
+
+                // -------------------------------------------------
+                // МИНУС
+                // -------------------------------------------------
+
+                if ($fminus) {
+
+                    if ($qty < 0) {
                         $flag = false;
                     }
-
                 }
-                if($fmin && $item->minqty>0) {
-                    if($qty < $item->minqty) {
+
+
+                // -------------------------------------------------
+                // МИНИМУМ
+                // -------------------------------------------------
+
+                if ($fmin && $item->minqty > 0) {
+
+                    if ($qty < $item->minqty) {
                         $flag = false;
                     }
-
-
                 }
 
-                if(!$fminus && !$fmin) {
-                    if($qty >0) {
+
+                // -------------------------------------------------
+                // ОБЫЧНЫЙ РЕЖИМ
+                // -------------------------------------------------
+
+                if (!$fminus && !$fmin) {
+
+                    if ($qty > 0) {
                         $flag = false;
                     }
-
-
                 }
-                $r['qty']= H::fqty($qty) ;
 
 
-            
+                $r['qty'] =
+                    H::fqty($qty);
 
-            if($flag) {
-                continue;
-            } //все  нули
-            
-            
-            $r['cfcol']  =  array() ;
 
-            foreach($cfnames as $fn)  {
-              foreach($item->getcf() as $f)  {
-                 if($fn===$f->name)  {
-                     $r['cfcol'][]=array('val'=>$f->val) ;
-                 }
-              }
+                // -------------------------------------------------
+                // ФИЛЬТР НУЛЕВЫХ
+                // -------------------------------------------------
+
+                if ($flag) {
+                    continue;
+                }
+
+
+                // -------------------------------------------------
+                // КАСТОМНЫЕ ПОЛЯ
+                // -------------------------------------------------
+
+                $r['cfcol'] = array();
+
+
+                foreach ($cfnames as $fn) {
+
+                    foreach ($item->getcf() as $f) {
+
+                        if ($fn === $f->name) {
+
+                            $r['cfcol'][] =
+                                array(
+                                    'val' => $f->val
+                                );
+                        }
+                    }
+                }
+
+
+                $detailitems[] =
+                    $r;
             }
-            
-            
-            $detailitems[] = $r;
 
-          }
-          if(count($detailitems)>0) {
-              $detail[] = ['items'=>$detailitems,'storename'=>$storename];               
-          }
 
-          
+            if (count($detailitems) > 0) {
+
+                $detail[] =
+                    array(
+                        'items' =>
+                            $detailitems,
+
+                        'storename' =>
+                            $storename
+                    );
+            }
         }
 
-        $colspan=5;
- 
-        $colspan += count($cfnames);
-     
-        $header = array(  
-                         "date"=>H::fd(time()),
-                         "ver"=>true ,
-                         "colspan"=>$colspan ,
-                         "cfnames"=>\App\Util::tokv($cfnames) ,
-                         "_detail"       => $detail,
-                         "storescol"       => []
-                        
+
+        // ---------------------------------------------------------
+        // COLSPAN
+        // ---------------------------------------------------------
+
+        $colspan = 5;
+
+        $colspan +=
+            count($cfnames);
+
+
+        // ---------------------------------------------------------
+        // HEADER
+        // ---------------------------------------------------------
+
+        $header = array(
+
+            "date" =>
+                H::fd(time()),
+
+            "ver" =>
+                true,
+
+            "colspan" =>
+                $colspan,
+
+            "cfnames" =>
+                \App\Util::tokv($cfnames),
+
+            "_detail" =>
+                $detail,
+
+            "storescol" =>
+                []
         );
 
-        $report = new \App\Report('report/storeitems.tpl');
 
-        $html = $report->generate($header);
+        // ---------------------------------------------------------
+        // ОТЧЁТ
+        // ---------------------------------------------------------
 
-        return $html;
+        $report =
+            new \App\Report('report/storeitems.tpl');
+
+
+        return $report->generate($header);
     }
 
 
+    /**
+     * Получение данных отчёта
+     */
+    public function getData() {
+
+        $html =
+            $this->generateReport();
+
+
+        \App\Session::getSession()->printform =
+            "<html><head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\"></head><body>"
+            . $html .
+            "</body></html>";
+
+
+        return $html;
+    }
 }
+

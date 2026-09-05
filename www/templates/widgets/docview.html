@@ -210,8 +210,8 @@
                                     
                                     <th v-show="docdata.showpartion" class="text-end">Обл. цiна</th>
                                   
-                                    <th class="text-end">Цiна</th>
-                                    <th class="text-end">Сума</th>
+                                    <th v-show="docdata.showpartion" class="text-end">Цiна</th>
+                                    <th v-show="docdata.showpartion" class="text-end">Сума</th>
 
                                 </tr>
                                 <tr v-for="item   in docdata.entrylist" >
@@ -221,10 +221,32 @@
                                     
                                     <td v-show="docdata.showpartion" class="text-end "  >{{item.itpartion}}</td>
                                    
-                                    <td class="text-end "  >{{item.itprice}}</td>
-                                    <td class="text-end "  >{{item.itamount}}</td>
+                                    <td v-show="docdata.showpartion" class="text-end "  >{{item.itprice}}</td>
+                                    <td v-show="docdata.showpartion" class="text-end "  >{{item.itamount}}</td>
 
 
+                                </tr>
+                                <tr v-if="docdata.showentryprofit" style="border-top:2px solid #999">
+                                    <td class="fw-bold">Всього</td>
+                                    <td></td>
+                                    <td class="text-end fw-bold">{{docdata.entryqty}}</td>
+                                    <td v-show="docdata.showpartion" class="text-end fw-bold">{{docdata.entrypartion}}</td>
+                                    <td v-show="docdata.showpartion" class="text-end fw-bold">{{docdata.entryprice}}</td>
+                                    <td v-show="docdata.showpartion" class="text-end fw-bold">{{docdata.entryamount}}</td>
+                                </tr>
+                                <tr v-if="docdata.showentryprofit">
+                                    <td colspan="2"></td>
+                                    <td></td>
+                                    <td v-show="docdata.showpartion"></td>
+                                    <td class="text-end">Собівартість</td>
+                                    <td class="text-end">{{docdata.entrycost}}</td>
+                                </tr>
+                                <tr v-if="docdata.showentryprofit">
+                                    <td colspan="2"></td>
+                                    <td></td>
+                                    <td v-show="docdata.showpartion"></td>
+                                    <td class="text-end fw-bold">Прибуток</td>
+                                    <td class="text-end fw-bold" v-bind:class="docdata.entryprofitneg ? 'text-danger' : 'text-success'">{{docdata.entryprofit}}</td>
                                 </tr>
                             </table>
                         </div>

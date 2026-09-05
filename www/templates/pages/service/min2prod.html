@@ -1,0 +1,1188 @@
+<html>
+<head>
+    <title>Min2Prod — оприходование</title>
+</head>
+
+<body>
+
+<div class="min2prod-page">
+
+    <div class="min2prod-block min2prod-header">
+        <h3>Min2Prod — оприходование минимальных количеств</h3>
+        <small class="text-muted">
+            Расчёт по minqty / recom, остатку на складе и продажам за 7 дней
+        </small>
+    </div>
+
+    <div class="min2prod-block">
+
+        <form zippy="searchform" class="min2prod-search">
+
+            <div class="min2prod-search-item">
+                <label for="search">Поиск</label>
+                <input
+                    id="search"
+                    class="form-control"
+                    zippy="search"
+                    placeholder="Название / код"
+                >
+            </div>
+
+            <div class="min2prod-search-item">
+                <label for="store">Склад</label>
+                <select
+                    id="store"
+                    class="form-control"
+                    zippy="store"
+                >
+                    <option value="0">Не выбран</option>
+                </select>
+            </div>
+
+            <div class="min2prod-search-item">
+                <label for="category">Категория</label>
+                <select
+                    id="category"
+                    class="form-control"
+                    zippy="category"
+                >
+                    <option value="0">По всем</option>
+                </select>
+            </div>
+
+            <div class="min2prod-search-button">
+                <button
+                    type="submit"
+                    zippy="update"
+                    class="btn btn-primary min2prod-update"
+                >
+                    Обновить
+                </button>
+            </div>
+
+            <div class="min2prod-bonus">
+
+                <a
+                    href="#"
+                    class="text-decoration-none"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#bonusCollapse"
+                    aria-expanded="false"
+                    aria-controls="bonusCollapse"
+                >
+                    <span class="small">
+                        <i
+                            class="fa fa-chevron-right"
+                            id="bonusChevron"
+                        ></i>
+                        Бонус по продажам (7 дн.)
+                    </span>
+                </a>
+
+                <div id="bonusCollapse" class="collapse mt-2">
+
+                    <div class="bonus-line">
+
+                        <div class="bonus-card">
+                            <div class="bonus-range">0</div>
+
+                            <div class="bonus-input-line">
+                                <span class="text-success">+</span>
+
+                                <input
+                                    class="form-control form-control-sm text-center"
+                                    type="text"
+                                    zippy="bonus0"
+                                    pattern="[0-9]+"
+                                >
+                            </div>
+                        </div>
+
+                        <div class="bonus-card">
+                            <div class="bonus-range">1–3</div>
+
+                            <div class="bonus-input-line">
+                                <span class="text-success">+</span>
+
+                                <input
+                                    class="form-control form-control-sm text-center"
+                                    type="text"
+                                    zippy="bonus1"
+                                    pattern="[0-9]+"
+                                >
+                            </div>
+                        </div>
+
+                        <div class="bonus-card">
+                            <div class="bonus-range">4–9</div>
+
+                            <div class="bonus-input-line">
+                                <span class="text-success">+</span>
+
+                                <input
+                                    class="form-control form-control-sm text-center"
+                                    type="text"
+                                    zippy="bonus2"
+                                    pattern="[0-9]+"
+                                >
+                            </div>
+                        </div>
+
+                        <div class="bonus-card">
+                            <div class="bonus-range">10+</div>
+
+                            <div class="bonus-input-line">
+                                <span class="text-success">+</span>
+
+                                <input
+                                    class="form-control form-control-sm text-center"
+                                    type="text"
+                                    zippy="bonus3"
+                                    pattern="[0-9]+"
+                                >
+                            </div>
+                        </div>
+
+                        <div class="text-muted small bonus-help">
+                            После изменения нажми «Обновить»
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </form>
+
+    </div>
+
+    <form zippy="listform">
+
+        <div class="min2prod-table-block">
+
+            <div class="min2prod-table-toolbar">
+
+                <div class="min2prod-table-title">
+                    Список товаров
+                </div>
+
+                <input
+                    type="submit"
+                    zippy="export"
+                    value="Создать приход"
+                    class="btn btn-success"
+                >
+
+            </div>
+
+            <div class="d-none">
+
+                <a
+                    zippy="selectall"
+                    href="#"
+                ></a>
+
+                <a
+                    zippy="deselectall"
+                    href="#"
+                ></a>
+
+            </div>
+
+            <div class="min2prod-table-wrap">
+
+                <table class="table table-sm table-hover table-striped min2prod-table">
+
+                    <thead>
+
+                        <tr>
+
+                            <th class="select-cell text-center">
+                                <input
+                                    type="checkbox"
+                                    class="form-check-input"
+                                    id="selall"
+                                    checked
+                                >
+                            </th>
+
+                            <th class="item-name">
+                                Наименование
+                            </th>
+
+                            <th class="text-end">
+                                Прод
+                            </th>
+
+                            <th class="text-end">
+                                Рек
+                            </th>
+
+                            <th class="text-end">
+                                Min
+                            </th>
+
+                            <th class="text-end">
+                                Факт
+                            </th>
+
+                            <th class="button-cell"></th>
+
+                            <th class="qty-cell">
+                                Прих
+                            </th>
+
+                            <th class="button-cell"></th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        <tr zippy="list">
+
+                            <td class="select-cell text-center">
+
+                                <input
+                                    type="checkbox"
+                                    zippy="selected"
+                                    class="seldel form-check-input"
+                                >
+
+                            </td>
+
+                            <td
+                                class="item-name"
+                                zippy="itemname"
+                            ></td>
+
+                            <td
+                                class="text-end"
+                                zippy="sales"
+                            ></td>
+
+                            <td
+                                class="text-end"
+                                zippy="recom"
+                            ></td>
+
+                            <td
+                                class="text-end"
+                                zippy="minqty"
+                            ></td>
+
+                            <td
+                                class="text-end"
+                                zippy="qty"
+                            ></td>
+
+                            <td class="button-cell text-center">
+
+                                <button
+                                    type="button"
+                                    class="btn btn-sm btn-warning js-qty-minus"
+                                    zippy="minus"
+                                >
+                                    −
+                                </button>
+
+                            </td>
+
+                            <td class="qty-cell text-center">
+
+                                <input
+                                    class="form-control form-control-sm text-center qtyprice js-qty-input"
+                                    type="text"
+                                    zippy="prodqty"
+                                    pattern="[0-9,\.]+"
+                                >
+
+                            </td>
+
+                            <td class="button-cell text-center">
+
+                                <button
+                                    type="button"
+                                    class="btn btn-sm btn-success js-qty-plus"
+                                    zippy="plus"
+                                >
+                                    +
+                                </button>
+
+                            </td>
+
+                        </tr>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+            <div class="min2prod-table-toolbar min2prod-table-toolbar-bottom">
+
+                <div></div>
+
+                <button
+                    type="button"
+                    class="btn btn-success"
+                    id="exportBottom"
+                >
+                    Создать приход
+                </button>
+
+            </div>
+
+            <div class="min2prod-info">
+
+                <div>
+                    • Эфф. min = recom (если &gt; 0), иначе minqty
+                </div>
+
+                <div>
+                    • К производству = (эфф. min − остаток) + бонус по продажам
+                </div>
+
+                <div>
+                    • Количество ограничивается доступными комплектующими
+                </div>
+
+                <div>
+                    • Бонус продаж: 0 → +0, 1–3 → +1, 4–9 → +2, 10+ → +5
+                </div>
+
+            </div>
+
+        </div>
+
+    </form>
+
+</div>
+
+<script>
+
+document.addEventListener(
+    'click',
+    function (e) {
+
+        var button =
+            e.target.closest('#exportBottom');
+
+        if (!button) {
+            return;
+        }
+
+        e.preventDefault();
+
+        var exportButton =
+            document.querySelector('[zippy="export"]');
+
+        if (exportButton) {
+            exportButton.click();
+        }
+    }
+);
+
+(function () {
+
+    var link =
+        document.querySelector(
+            '[data-bs-target="#bonusCollapse"]'
+        );
+
+    var panel =
+        document.getElementById(
+            'bonusCollapse'
+        );
+
+    var chevron =
+        document.getElementById(
+            'bonusChevron'
+        );
+
+    if (!link || !panel) {
+        return;
+    }
+
+    function updateChevron(open) {
+
+        if (!chevron) {
+            return;
+        }
+
+        chevron.classList.toggle(
+            'fa-chevron-right',
+            !open
+        );
+
+        chevron.classList.toggle(
+            'fa-chevron-down',
+            open
+        );
+    }
+
+    if (
+        typeof bootstrap !== 'undefined'
+        && bootstrap.Collapse
+    ) {
+
+        panel.addEventListener(
+            'show.bs.collapse',
+            function () {
+                updateChevron(true);
+            }
+        );
+
+        panel.addEventListener(
+            'hide.bs.collapse',
+            function () {
+                updateChevron(false);
+            }
+        );
+
+    } else {
+
+        link.addEventListener(
+            'click',
+            function (e) {
+
+                e.preventDefault();
+
+                var open =
+                    panel.classList.toggle('show');
+
+                updateChevron(open);
+            }
+        );
+    }
+
+})();
+
+function syncSelAll() {
+
+    var items =
+        document.querySelectorAll('.seldel');
+
+    var all =
+        document.getElementById('selall');
+
+    if (!all) {
+        return;
+    }
+
+    if (!items.length) {
+
+        all.checked = false;
+        all.indeterminate = false;
+
+        return;
+    }
+
+    var checked = 0;
+
+    items.forEach(
+        function (item) {
+
+            if (item.checked) {
+                checked++;
+            }
+        }
+    );
+
+    all.checked =
+        checked === items.length;
+
+    all.indeterminate =
+        checked > 0
+        && checked < items.length;
+}
+
+var selall =
+    document.getElementById('selall');
+
+if (selall) {
+
+    selall.addEventListener(
+        'change',
+        function () {
+
+            var state =
+                this.checked;
+
+            document
+                .querySelectorAll('.seldel')
+                .forEach(
+                    function (cb) {
+                        cb.checked = state;
+                    }
+                );
+
+            syncSelAll();
+        }
+    );
+}
+
+document.addEventListener(
+    'click',
+    function (e) {
+
+        var minus =
+            e.target.closest('.js-qty-minus');
+
+        var plus =
+            e.target.closest('.js-qty-plus');
+
+        if (!minus && !plus) {
+            return;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        var row =
+            e.target.closest('tr');
+
+        if (!row) {
+            return;
+        }
+
+        var input =
+            row.querySelector('.js-qty-input');
+
+        var checkbox =
+            row.querySelector('.seldel');
+
+        if (!input) {
+            return;
+        }
+
+        var value =
+            parseFloat(
+                String(input.value)
+                    .replace(',', '.')
+            ) || 0;
+
+        if (minus) {
+            value =
+                Math.max(
+                    0,
+                    value - 1
+                );
+        }
+
+        if (plus) {
+            value++;
+        }
+
+        input.value =
+            Math.floor(value);
+
+        if (checkbox) {
+            checkbox.checked =
+                Math.floor(value) > 0;
+        }
+
+        syncSelAll();
+    }
+);
+
+document.addEventListener(
+    'input',
+    function (e) {
+
+        if (
+            !e.target.classList.contains(
+                'js-qty-input'
+            )
+        ) {
+            return;
+        }
+
+        var row =
+            e.target.closest('tr');
+
+        if (!row) {
+            return;
+        }
+
+        var checkbox =
+            row.querySelector('.seldel');
+
+        if (!checkbox) {
+            return;
+        }
+
+        var value =
+            parseFloat(
+                String(e.target.value)
+                    .replace(',', '.')
+            ) || 0;
+
+        checkbox.checked =
+            value > 0;
+
+        syncSelAll();
+    }
+);
+
+document.addEventListener(
+    'change',
+    function (e) {
+
+        if (
+            e.target.classList.contains(
+                'seldel'
+            )
+        ) {
+            syncSelAll();
+        }
+    }
+);
+
+document.addEventListener(
+    'keydown',
+    function (e) {
+
+        if (
+            !e.target.classList.contains(
+                'js-qty-input'
+            )
+        ) {
+            return;
+        }
+
+        if (e.key !== 'Tab') {
+            return;
+        }
+
+        var inputs =
+            Array.from(
+                document.querySelectorAll(
+                    '.js-qty-input'
+                )
+            );
+
+        var currentIndex =
+            inputs.indexOf(e.target);
+
+        if (currentIndex === -1) {
+            return;
+        }
+
+        var nextIndex =
+            e.shiftKey
+                ? currentIndex - 1
+                : currentIndex + 1;
+
+        if (
+            nextIndex < 0
+            || nextIndex >= inputs.length
+        ) {
+            return;
+        }
+
+        e.preventDefault();
+
+        inputs[nextIndex].focus();
+        inputs[nextIndex].select();
+    }
+);
+
+document.addEventListener(
+    'DOMContentLoaded',
+    function () {
+        syncSelAll();
+    }
+);
+
+setTimeout(syncSelAll, 100);
+setTimeout(syncSelAll, 500);
+
+</script>
+
+<style>
+
+.min2prod-page {
+    width: fit-content;
+    max-width: 66.666667%;
+    min-width: 0;
+}
+
+.min2prod-block {
+    width: 100%;
+    margin-bottom: 16px;
+}
+
+.min2prod-header {
+    margin-bottom: 14px;
+}
+
+.min2prod-header h3 {
+    margin-bottom: 2px;
+}
+
+.min2prod-search {
+    width: 100%;
+    display: grid;
+    grid-template-columns:
+        minmax(180px, 3fr)
+        minmax(150px, 3fr)
+        minmax(150px, 3fr)
+        minmax(100px, 1fr);
+    gap: 8px;
+    align-items: end;
+    margin: 0;
+}
+
+.min2prod-search-item,
+.min2prod-search-button {
+    min-width: 0;
+}
+
+.min2prod-search label {
+    display: block;
+    margin-bottom: 4px;
+}
+
+.min2prod-search .form-control {
+    width: 100%;
+}
+
+.min2prod-update {
+    width: 100%;
+    white-space: nowrap;
+}
+
+.min2prod-bonus {
+    grid-column: 1 / -1;
+    width: 100%;
+    margin-top: 2px;
+}
+
+.bonus-line {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 8px;
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 2px;
+}
+
+.bonus-card {
+    flex: 0 0 110px;
+    width: 110px;
+    min-width: 110px;
+    height: 76px;
+    box-sizing: border-box;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 7px 8px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    background: #fff;
+}
+
+.bonus-range {
+    width: 100%;
+    height: 22px;
+    line-height: 22px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #6c757d;
+    margin-bottom: 5px;
+}
+
+.bonus-input-line {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    height: 30px;
+}
+
+.bonus-card input {
+    width: 50px !important;
+    min-width: 50px !important;
+    max-width: 50px !important;
+    height: 30px;
+    text-align: center;
+}
+
+.bonus-help {
+    align-self: center;
+    white-space: nowrap;
+    margin-left: 2px;
+}
+
+.min2prod-table-block {
+    width: 100%;
+    max-width: 100%;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 6px;
+    background: #fff;
+    box-sizing: border-box;
+}
+
+.min2prod-table-toolbar {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 4px;
+}
+
+.min2prod-table-toolbar-bottom {
+    margin-top: 4px;
+    margin-bottom: 0;
+}
+
+.min2prod-table-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: #6c757d;
+}
+
+.min2prod-table-wrap {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+.min2prod-table {
+    width: max-content !important;
+    max-width: none;
+    margin: 0;
+    table-layout: auto;
+}
+
+.min2prod-table th,
+.min2prod-table td {
+    white-space: nowrap;
+    vertical-align: middle;
+    padding: 3px 4px !important;
+}
+
+.min2prod-table .item-name {
+    white-space: normal;
+    min-width: 200px;
+}
+
+/* Галочка */
+.min2prod-table .select-cell {
+    width: 32px !important;
+    min-width: 32px !important;
+    max-width: 32px !important;
+    padding-left: 2px !important;
+    padding-right: 2px !important;
+}
+
+/* Кнопки минус/плюс */
+.min2prod-table .button-cell {
+    width: 28px !important;
+    min-width: 28px !important;
+    max-width: 28px !important;
+    padding-left: 1px !important;
+    padding-right: 1px !important;
+    text-align: center !important;
+}
+
+/* Количество */
+.min2prod-table .qty-cell {
+    width: 58px !important;
+    min-width: 58px !important;
+    max-width: 58px !important;
+    padding-left: 1px !important;
+    padding-right: 1px !important;
+    text-align: center !important;
+}
+
+.min2prod-table .qty-cell input {
+    width: 50px !important;
+    min-width: 50px !important;
+    max-width: 50px !important;
+    height: 28px;
+    margin: 0 auto !important;
+    display: block !important;
+    padding-left: 2px !important;
+    padding-right: 2px !important;
+    text-align: center !important;
+}
+
+/* Кнопки */
+.min2prod-table .button-cell .btn {
+    width: 25px;
+    height: 28px;
+    padding: 0;
+    margin: 0;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.min2prod-info {
+    margin-top: 8px;
+    padding-top: 6px;
+    border-top: 1px solid #eee;
+    color: #6c757d;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+@media (max-width: 991px) {
+
+    .min2prod-page {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+    }
+
+    .min2prod-block {
+        width: 100%;
+    }
+
+    .min2prod-search {
+        grid-template-columns: 1fr;
+    }
+
+    .min2prod-update {
+        width: auto;
+    }
+
+    .min2prod-bonus {
+        grid-column: auto;
+    }
+
+    .min2prod-table-block {
+        width: 100%;
+        max-width: 100%;
+        padding: 3px;
+        overflow: hidden;
+    }
+
+    .min2prod-table-wrap {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    .min2prod-table {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        table-layout: fixed !important;
+    }
+
+    .min2prod-table th,
+    .min2prod-table td {
+        padding: 3px 2px !important;
+        font-size: 11px;
+    }
+
+    /* Галочка */
+    .min2prod-table .select-cell {
+        width: 25px !important;
+        min-width: 25px !important;
+        max-width: 25px !important;
+        padding-left: 1px !important;
+        padding-right: 1px !important;
+    }
+
+    /* Найменование занимает всё свободное место */
+    .min2prod-table .item-name {
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+        white-space: normal !important;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+        text-align: left !important;
+    }
+
+    /* Прод / Рек / Min / Факт */
+    .min2prod-table th:nth-child(3),
+    .min2prod-table td:nth-child(3),
+    .min2prod-table th:nth-child(4),
+    .min2prod-table td:nth-child(4),
+    .min2prod-table th:nth-child(5),
+    .min2prod-table td:nth-child(5),
+    .min2prod-table th:nth-child(6),
+    .min2prod-table td:nth-child(6) {
+        width: 32px !important;
+        min-width: 32px !important;
+        max-width: 32px !important;
+        padding-left: 1px !important;
+        padding-right: 1px !important;
+        text-align: center !important;
+    }
+
+    /* Минус / плюс */
+    .min2prod-table .button-cell {
+        width: 25px !important;
+        min-width: 25px !important;
+        max-width: 25px !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+
+    .min2prod-table .button-cell .btn {
+        width: 23px;
+        height: 26px;
+        padding: 0;
+        margin: 0;
+        font-size: 13px;
+    }
+
+    /* Приход */
+    .min2prod-table .qty-cell {
+        width: 48px !important;
+        min-width: 48px !important;
+        max-width: 48px !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+
+    .min2prod-table .qty-cell input {
+        width: 44px !important;
+        min-width: 44px !important;
+        max-width: 44px !important;
+        height: 26px;
+        padding: 1px !important;
+        font-size: 11px;
+    }
+
+    .min2prod-table .form-check-input {
+        width: 14px;
+        height: 14px;
+        margin: 0;
+    }
+
+    .min2prod-table-toolbar {
+        gap: 5px;
+    }
+
+    .min2prod-table-toolbar .btn {
+        font-size: 12px;
+        padding: 4px 7px;
+    }
+
+    .min2prod-table-title {
+        font-size: 12px;
+    }
+
+    .min2prod-info {
+        font-size: 10px;
+        line-height: 1.3;
+    }
+
+    .bonus-line {
+        max-width: 100%;
+    }
+}
+
+@media (max-width: 575px) {
+
+    .min2prod-page {
+        width: 100%;
+        max-width: 100%;
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    .min2prod-table-block {
+        border-radius: 4px;
+        padding: 2px;
+    }
+
+    .min2prod-table th,
+    .min2prod-table td {
+        padding: 2px 1px !important;
+        font-size: 10px;
+    }
+
+    .min2prod-table .select-cell {
+        width: 23px !important;
+        min-width: 23px !important;
+        max-width: 23px !important;
+    }
+
+    /* Наименование максимально широкое */
+    .min2prod-table .item-name {
+        width: auto !important;
+        min-width: 0 !important;
+        font-size: 10px;
+        line-height: 1.2;
+    }
+
+    /* Узкие числовые колонки */
+    .min2prod-table th:nth-child(3),
+    .min2prod-table td:nth-child(3),
+    .min2prod-table th:nth-child(4),
+    .min2prod-table td:nth-child(4),
+    .min2prod-table th:nth-child(5),
+    .min2prod-table td:nth-child(5),
+    .min2prod-table th:nth-child(6),
+    .min2prod-table td:nth-child(6) {
+        width: 30px !important;
+        min-width: 30px !important;
+        max-width: 30px !important;
+    }
+
+    /* Минус / плюс ещё плотнее */
+    .min2prod-table .button-cell {
+        width: 23px !important;
+        min-width: 23px !important;
+        max-width: 23px !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+
+    .min2prod-table .button-cell .btn {
+        width: 21px;
+        height: 24px;
+        font-size: 12px;
+        padding: 0;
+        margin: 0;
+    }
+
+    /* Поле прихода */
+    .min2prod-table .qty-cell {
+        width: 45px !important;
+        min-width: 45px !important;
+        max-width: 45px !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+
+    .min2prod-table .qty-cell input {
+        width: 41px !important;
+        min-width: 41px !important;
+        max-width: 41px !important;
+        height: 24px;
+        font-size: 10px;
+        padding: 1px !important;
+    }
+
+    .min2prod-table .form-check-input {
+        width: 14px;
+        height: 14px;
+    }
+
+    .min2prod-info {
+        font-size: 9px;
+    }
+}
+
+</style>
+
+</body>
+</html>

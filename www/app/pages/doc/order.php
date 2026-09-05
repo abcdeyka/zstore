@@ -866,7 +866,7 @@ class Order extends \App\Pages\Base
     public function OnPayType($sender) {
          $t= intval($sender->getValue() );
          $this->docform->payed->setVisible($t==1);
-         $this->docform->payment->setVisible($t==1);
+         //$this->docform->payment->setVisible($t==1);
          $this->docform->dostore->setVisible($t!=3);
          if($t==3) {
            $this->docform->dostore->setChecked(false) ; 
@@ -1048,6 +1048,7 @@ class Order extends \App\Pages\Base
         $this->editnewitem->setVisible(false);
         $this->editdetail->setVisible(true);
     }
+
 
     public function onTextBayCity($sender) {
         $text = $sender->getText()  ;

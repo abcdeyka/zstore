@@ -136,21 +136,91 @@ class DocView extends \Zippy\Html\PageFragment
 
         //склад
         $ret['entrylist'] = array();
-        $sql = " select e.entry_id, s.stock_id, s.partion,i.itemname,i.item_code,e.quantity,e.outprice  
+        $sql = " select e.entry_id, s.stock_id, s.partion,s.item_id,i.itemname,i.item_code,e.quantity,e.outprice  
         from entrylist e 
         join store_stock  s on e.stock_id = s.stock_id
         join items i on s.item_id = i.item_id 
-        where  coalesce(e.quantity,0) <> 0  and document_id=" . $docid . " order  by e.entry_id";
+        where  coalesce(e.quantity,0) <> 0  and document_id=" . intval($docid) . " order  by e.entry_id";
 
+        $orderItemIds = array();
+        $itemPrices = array();
+        $sale = 0.0;
+        foreach ($doc->unpackDetails('detaildata') as $it) {
+            $id = intval($it->item_id);
+            $orderItemIds[$id] = true;
+            $itemPrices[$id] = doubleval($it->price);
+            $sale += doubleval($it->price) * doubleval($it->quantity);
+        }
+        if (method_exists($doc, 'getAmountReg')) {
+            $reg = doubleval($doc->getAmountReg());
+            if ($reg > 0) {
+                $sale = $reg;
+            }
+        } elseif (doubleval($doc->amount) > 0) {
+            $sale = doubleval($doc->amount);
+        }
+
+        $cost = 0.0;
+        $totQty = 0.0;
+        $totPartion = 0.0;
+        $totPrice = 0.0;
+        $totAmount = 0.0;
+        $costCache = array();
+        $priceCache = $itemPrices;
         foreach(\App\Entity\Entry::findBySql($sql) as $entry) {
+            $qty = doubleval($entry->quantity);
+            $itemId = intval($entry->item_id);
+            $partion = doubleval($entry->partion);
+            if ($partion <= 0) {
+                if (!isset($costCache[$itemId])) {
+                    $costCache[$itemId] = $this->resolveItemCost($itemId);
+                }
+                $partion = $costCache[$itemId];
+            }
+            $price = $partion;
+            $amount = $partion * $qty;
+            $costAmount = $partion * $qty;
+
             $ret['entrylist'][]= array(
                 'itname'=> $entry->itemname,
                 'itcode'=>$entry->item_code,
-                'itqty'=>H::fqty($entry->quantity),
-                'itpartion'=>H::fa($entry->partion),
-                'itprice'=>H::fa($entry->outprice),
-                'itamount'=>H::fa($entry->outprice * $entry->quantity)
+                'itqty'=>H::fqty($qty),
+                'itpartion'=>H::fa($partion),
+                'itprice'=>H::fa($price),
+                'itamount'=>H::fa(abs($amount))
               ) ;
+
+            $totQty += $qty;
+            $totPartion += $costAmount;
+            $totPrice += $amount;
+            $totAmount += $amount;
+
+            if ($qty < 0 && (count($orderItemIds) == 0 || isset($orderItemIds[$itemId]))) {
+                $cost += abs($partion * $qty);
+            }
+        }
+        $profit = $sale - $cost;
+        $ret['entryqty'] = H::fqty(abs($totQty));
+        $ret['entrypartion'] = H::fa(abs($totPartion));
+        $ret['entryprice'] = H::fa(abs($totPrice));
+        $ret['entryamount'] = H::fa(abs($totAmount));
+        $ret['entrysale'] = H::fa(abs($sale));
+        $ret['entrycost'] = H::fa(abs($cost));
+        $ret['entryprofit'] = H::fa($profit);
+        $ret['entryprofitneg'] = $profit < 0;
+        $ret['showentryprofit'] = count($ret['entrylist']) > 0 && $ret['showpartion'];
+
+        if ($ret['showpartion'] == false) {
+            foreach ($ret['entrylist'] as $k => $row) {
+                $ret['entrylist'][$k]['itpartion'] = '';
+                $ret['entrylist'][$k]['itprice'] = '';
+                $ret['entrylist'][$k]['itamount'] = '';
+            }
+            $ret['entrypartion'] = '';
+            $ret['entryprice'] = '';
+            $ret['entryamount'] = '';
+            $ret['entrycost'] = '';
+            $ret['entryprofit'] = '';
         }
 
 
@@ -396,6 +466,56 @@ class DocView extends \Zippy\Html\PageFragment
 
         }
 
+    }
+
+    /** Собівартість: партія, потім собівартість ГП (BOM), потім середня/остання партія. */
+    private function resolveItemCost($itemId) {
+        $item = \App\Entity\Item::load(intval($itemId));
+        if ($item == null) {
+            return 0.0;
+        }
+        if (doubleval($item->costprice) > 0) {
+            return doubleval($item->costprice);
+        }
+        if (method_exists($item, 'getProdprice')) {
+            $p = doubleval($item->getProdprice());
+            if ($p > 0) {
+                return $p;
+            }
+        }
+        if (method_exists($item, 'getPartion')) {
+            $p = doubleval($item->getPartion());
+            if ($p > 0) {
+                return $p;
+            }
+        }
+        if (method_exists($item, 'getLastPartion')) {
+            $p = doubleval($item->getLastPartion());
+            if ($p > 0) {
+                return $p;
+            }
+        }
+        return 0.0;
+    }
+
+    /** Ціна продажу з картки ТМЦ, якщо в проводці порожня. */
+    private function resolveItemPrice($itemId) {
+        $item = \App\Entity\Item::load(intval($itemId));
+        if ($item == null) {
+            return 0.0;
+        }
+        if (method_exists($item, 'getPrice')) {
+            $p = doubleval($item->getPrice());
+            if ($p > 0) {
+                return $p;
+            }
+        }
+        foreach (array('price1', 'price', 'price2') as $f) {
+            if (isset($item->{$f}) && doubleval($item->{$f}) > 0) {
+                return doubleval($item->{$f});
+            }
+        }
+        return 0.0;
     }
 
     /*

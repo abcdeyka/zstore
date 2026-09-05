@@ -1,19 +1,19 @@
 <html>
      <head>
         <title> Журнал замовлень  </title>
-
+        <style>
+            summary.btn { list-style: none; }
+            summary.btn::-webkit-details-marker { display: none; }
+        </style>
     </head>
   <body>
         <div class="row">
             <div class="col-12 ">
-
                 <h3>Журнал замовлень </h3>
             </div>
              <div zippy="listpanel" class="col-12 col-xl-11">
-
                 <div class="navbar">
                     <form zippy="filter"  >
-
                        <div class="row  ">
                         <label class="col-form-label col-auto" for="searchnumber"> № </label>
                          <div class="col-auto  ">
@@ -40,39 +40,28 @@
                     </form>
                 </div>
                 <a href="/index.php?p=App/Pages/Doc/Order" class="btn btn-info mt-2 mb-3">Нове замовлення</a>
-
-
                 <br><a zippy="csv">Експорт у Excel</a>
                  <div class="table-responsive-lg  "    >
              
                 <table class="table   table-sm   ">
                     <tr>
-
                         <th>Номер</th>
                         <th>Дата</th>
                         <th>Замовник</th>
                         <th class="text-end">Сума</th>
                         <th>Статус</th>
                         <th>Вiдповiдальний</th>
-
-
-
                         <th></th>
                         <th></th>
                         <th></th>
                         <th></th>
                         <th></th>
-
-
                     </tr>
                     <tr zippy="doclist">
-
                         <td class="text-nowrap" ><a zippy="number"></a></td>
                         <td class="text-nowrap" zippy="date"></td>
                         <td  class="text-nowrap"><a href="return false; void(0)" zippy="customer"></a></td>
                         <td zippy="amount" class="text-end"></td>
-
-
                         <td class="text-nowrap" zippy="state"></td>
                         <td   zippy="emp"></td>
                         <td ><small zippy="onotes"></small></td>
@@ -85,30 +74,21 @@
                          <td>
                            <i style="cursor:pointer" zippy="cchat" title="Чат с  замовником" ></i>  
                         </td>
-
                         <td class="text-nowrap">
                             &nbsp; &nbsp;<a zippy="show" title="Перегляд"><i class="fa fa-eye"></i></a>
                              &nbsp; &nbsp; &nbsp; &nbsp; <a zippy="edit" title="Редагування"><i class="fa fa-edit"></i></a>
-
                         </td>
-
-
                     </tr>
-
                 </table>
-
                 <div zippy="pag">                 </div>
              </div>
             </div>
-
         </div>
-
       
-
         <div class="row" zippy="statuspan">
             <div class="col-12   col-xl-10">
                 <details>
-                  <summary>Наявнiсть товарiв на складi та/або у постачальника</summary>
+                  <summary class="btn btn-outline-secondary btn-sm mb-2">Наявнiсть товарiв на складi та/або у постачальника</summary>
                   
                  
            
@@ -175,7 +155,7 @@
           
                   
                 <details>
-                  <summary> Товари в  заявках постачальнику</summary>
+                  <summary class="btn btn-outline-secondary btn-sm mb-2">Товари в заявках постачальнику</summary>
                <table class="table table-sm">
                      <tr>
                      <th>Заявка</th>
@@ -193,129 +173,69 @@
                 </details>
                  {{/issitems}} 
             </div>
-             <div class="col-12 col-xl-10 mt-2">      
-                <div class="navbar">
-                    <form zippy="statusform"  >
-                       <div class="row">      
-                       <div class="col-12 mb-2">      
-                          <div class="row"> 
-                         <div class="col-auto  ">
-                         <button zippy="binp" class="btn btn-success  me-2">  На виконання</button>
-                          </div>
-                         <div class="col-auto  ">
-                         <button zippy="bscan" class="btn btn-primary  me-2">  Зiбрати</button>
-                         </div>
-                        <div class="col-auto  ">
-                         <button zippy="bsplit" class="btn btn-primary  me-2">  Роздiлити</button>
-                         </div>
-                         <div class="col-auto  ">
-                         <button zippy="brd" class="btn btn-success  me-2">  Готовий до вiдправки</button>
-                         </div>
-                         <div class="col-auto  ">
-                         <button zippy="bsent" class="btn btn-success  me-2">  Вiдправлений</button>
-                         </div>
-                         <div class="col-auto  ">
-                         <button zippy="brec" class="btn btn-success  me-2">  Доставлений</button>
-                         </div>
-                         <div class="col-auto  ">
-                         <button zippy="bclose"   class="  btn btn-success  me-2 ">  Закрити                </button>
-                         </div>
-                         <div class="col-auto  ">
-                         <a zippy="btopay" class="  btn btn-success  ms-4 "> Сплатити</a>
-                         </div>
-                         <div class="col-auto  ">
-                         <button zippy="bref" class="btn btn-danger  me-2">  Анулювати                </button>
-                         </div>
-                       </div>
-                       </div>
-                       </div>
-                       <div class="col-12"> 
-                         <div class="row"> 
-                        
-                           <label class="col-form-label col-auto"  >Створити</label>
-                           <div class="col-auto  ">
-                        <button zippy="bttn" class="btn btn-primary  me-2">  ТТН</button>
-                        </div>
-                          <div class="col-auto  ">
-                          <button zippy="bpos" class="btn btn-primary  me-2">  {{^fiscal}} Чек   {{/fiscal}}     {{#fiscal}}  Фіскальний чек    {{/fiscal}}                 </button>
-                          </div>
-                          <div class="col-auto  ">
-                          <button zippy="bgi" class="btn btn-primary  me-2">  Видаткову накладну                </button>
-                          </div>
-                          <div class="col-auto  ">
-                          <button zippy="bginv" class="btn btn-primary  me-2">  Рахунок-фактуру                </button>
-                          </div>
-                          <div class="col-auto  ">
-                          <button zippy="bco" class="btn btn-primary  me-2">  Заявку постачальнику                                       </button>
-                          </div>
-                        {{#useprod}} 
-                          <div class="col-auto  ">
-                          <button zippy="btask" type="submit" class=" btn btn-primary me-2 ">  Наряд</button>
-                          </div>
-                            {{/useprod}}
-                         <div class="col-auto  ">
-                          <button zippy="bcopy" class="btn btn-primary  ms-4">  Копію</button>
-                          </div>
-                       </div>     
-                       </div>     
-                        </div>      
-                    </form> 
-                     </div>
-                       <div class="col-12 mb-2">      
-                      
-                       <div class="row"> 
-                       <div class="col-auto"> 
-                          
-              
-                     
-                     <form zippy="resform" class="  mt-1">
-                         <div class="row  ">
-                        <label class="col-form-label col-auto" data-label="bres">Резервувати товари </label>
-                        <div class="col-auto  ">
-                        <select class="form-control me-2"  zippy="store"></select>
-                        </div>
-                       <div class="col-auto  ">  
-                        <button zippy="bres" class="btn btn-success  ">OK                 </button>
-                        </div>
-                       <div class="col-auto  ">
-                        <button zippy="bunres" class="btn btn-primary "> Зняти з резерву                </button>
+                             <div class="col-12 col-xl-10 mt-2">      
+                <form zippy="statusform">
 
-                      </div>  </div>
-                    </form>       
+                  <div>
+                    <div class="d-inline-flex flex-wrap gap-1 align-items-center border rounded px-1 py-1 mb-1">
+                      <button zippy="binp" class="btn btn-success">На виконання</button>
+                      <button zippy="bscan" class="btn btn-primary">Зiбрати</button>
+                      <button zippy="bsplit" class="btn btn-primary">Роздiлити</button>
+                      <button zippy="brd" class="btn btn-success">Готовий до вiдправки</button>
+                      <button zippy="bsent" class="btn btn-success">Вiдправлений</button>
+                      <button zippy="brec" class="btn btn-success">Доставлений</button>
+                      <button zippy="bclose" class="btn btn-success">Закрити</button>
+                      <a zippy="btopay" class="btn btn-success">Сплатити</a>
+                      <button zippy="bref" class="btn btn-danger">Анулювати</button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div class="d-inline-flex flex-wrap gap-1 align-items-center border rounded px-1 py-1 mb-1">
+                      <button zippy="bttn" class="btn btn-primary">ТТН</button>
+                      <button zippy="bpos" class="btn btn-primary">{{^fiscal}}Чек{{/fiscal}}{{#fiscal}}Фіскальний чек{{/fiscal}}</button>
+                      <button zippy="bgi" class="btn btn-primary">Видаткову накладну</button>
+                      <button zippy="bginv" class="btn btn-primary">Рахунок-фактуру</button>
+                      <button zippy="bco" class="btn btn-primary">Заявку постачальнику</button>
+                      {{#useprod}}
+                      <button zippy="btask" type="submit" class="btn btn-primary">Наряд</button>
+                      {{/useprod}}
+                      <button zippy="bcopy" class="btn btn-primary">Копію</button>
+                      <button zippy="bprint" type="submit" class="btn btn-success"><i class="fa fa-print"></i> Друк етикеток</button>
+                    </div>
+                  </div>
+
+                </form>
+
+                <div>
+                  <div class="d-inline-flex flex-wrap gap-1 align-items-center border rounded px-1 py-1 mb-1">
+                    <form zippy="resform" class="mb-0">
+                      <div class="d-flex flex-wrap align-items-center gap-1">
+                        <label class="col-form-label py-0" data-label="bres">Резервувати</label>
+                        <select class="form-select form-select-sm w-auto" zippy="store"></select>
+                        <button zippy="bres" class="btn btn-success">OK</button>
+                        <button zippy="bunres" class="btn btn-primary">Зняти з резерву</button>
                       </div>
-                       <div class="col-auto"> 
-                    
-                    <form zippy="moveform" class="  mt-1 ms-4">
-                        <div class="row  ">
-                        <label class="col-form-label col-auto" class="me-2">Перевести на: </label>
-                       {{#usebranch}}
+                    </form>
 
-                        <label class="col-form-label col-auto" for="brmove">фiлiю </label>
-                         <div class="col-auto  ">
-                        <select zippy="brmove" class="form-control me-2 ">
+                    <form zippy="moveform" class="mb-0">
+                      <div class="d-flex flex-wrap align-items-center gap-1">
+                        <label class="col-form-label py-0">Перевести на:</label>
+                        {{#usebranch}}
+                        <label class="col-form-label py-0" for="brmove">філію</label>
+                        <select zippy="brmove" class="form-select form-select-sm w-auto">
                             <option value="0">Не вказано</option>
                         </select>
-                         </div>
-                       {{/usebranch}}
-                  
-                        <label class="col-form-label col-auto" for="usmove">користувача </label>
-                         <div class="col-auto  ">
-                         <select class="form-control me-2" zippy="usmove"  >
-
-                        </select>  </div>
-                         <div class="col-auto  ">
-                        <button zippy="bmove" type="submit" class="btn btn-success  ms-4 ">OK                 </button>
-                         </div></div>
-                     </form>                
-                    </div>
-                       </div>  
-                   
-                    
+                        {{/usebranch}}
+                        <label class="col-form-label py-0" for="usmove"> </label>
+                        <select class="form-select form-select-sm w-auto" zippy="usmove"></select>
+                        <button zippy="bmove" type="submit" class="btn btn-success">OK</button>
+                      </div>
+                    </form>
+                  </div>
                 </div>
 
-
                 <div zippy="docview"></div>
-
             </div>
         </div>
         
@@ -325,7 +245,7 @@
                  <h5>Замовлення <span zippy="editdn"></span></h5>
                  <form zippy="editform"  >
                      {{#usescanner}}
-                    <div class="card justify-content-start">
+                    <div class="navbar nav justify-content-start">
                         Штрих код &nbsp;<input autofocus="on"   style="width:150px;" autocomplete="off"  type="text" zippy="editbarcode"  onkeydown="onBarCode()">
                         &nbsp;   &nbsp;<a zippy="addcode" class="btn btn-info btn-sm">+</a>
                 
@@ -351,13 +271,9 @@
                     <button zippy="editcancel" type="submit" class="  btn btn-secondary  me-2 ">Скасувати</button>                 
                     <button zippy="editsave" type="submit" class="  btn btn-info  me-2 ">Зберегти</button>                 
                     <button zippy="editready" type="submit" class="  btn btn-success  ms-4 ">Зiбрано</button>                 
-
                     <i style="cursor:pointer" title="Вiдправити запитання" zippy="editchat" class="fa fa-comments"></i>
-
  
                  </div>
-
-
                </form>
       
             </div>
@@ -388,12 +304,32 @@
                   
                     
                  </div>
-
-
                </form>
       
             </div>
         </div>        
+        
+<!-- Print Modal -->
+<div id="pform" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-body">
+                <table>
+                    <tr>
+                        <td align="center" id="tag"></td>
+                    </tr>
+                    <tr>
+                        <td align="center">
+                            <a href="javascript:void(0)"
+                               onclick="if (window.jQuery && $('#tag').printThis) { $('#tag').printThis(); } if (window.bootstrap && document.getElementById('pform')) { var el = document.getElementById('pform'); var m = bootstrap.Modal.getInstance(el) || new bootstrap.Modal(el); m.hide(); } else if (window.jQuery) { $('#pform').modal('hide'); }"
+                               class="btn btn-success btn-sm">Друк Позицій</a>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
         
          {{={| |}=}}   
           <div class="row">
@@ -481,7 +417,6 @@
                            
                             
                             </div>
-
                         </div>
                     </div>
                 </div>
@@ -492,14 +427,16 @@
   {|={{ }}=|}  
         <script>
         
-         
+     function onBarCode(ele) {
+            if (event.key === 'Enter' || event.keyCode == 13) {
+                $('#addcode').click()
+            }
+        }        
         
         
           {{#askclose}}
-
             function check_bclose() {
                 return confirm("Замовлення не оплачено або не виконано. Закрити?")
-
             }
           {{/askclose}} 
         
@@ -537,14 +474,12 @@
                       })                 
                  },
                  CChatInit:function(doc_id ){
-
                       this.doc_id  = doc_id;
                       
                       callPM('getCChatMessages',[this.doc_id],null,(data)=> 
                       {
                               
                           this.msglist = data.msglist  
-
        
                       })                       
                       
@@ -575,21 +510,6 @@
      
          
         </script>
-
-
-
     
     </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-

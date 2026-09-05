@@ -1,149 +1,201 @@
 <html>
-    <head>
-            <title> Каси та банкiвскi рахунки </title>
-  </head>
+<head>
+    <title>Каси та банківські рахунки</title>
+</head>
+<body>
 
-    <body>
-        <div class="row">
-            <div class="col-12 col-md-7 col-xl-5">
-                <div zippy="mftable">
-                    <h3>Каси та банкiвскi рахунки</h3>
-                    <a zippy="addnew" class="btn btn-primary  ">Додати</a>
-                    <table class="table    table-sm">
-                        <tr>
-                            <th>Назва</th>
-                            {{#usebranch}}
-                            <th>Філія</th>
-                            {{/usebranch}}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12 col-md-7 col-xl-5">
 
-                            <th>Опис</th>
-                            <th class="text-end">Баланс</th>
+            <div zippy="mftable">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="mb-0">Каси та банківські рахунки</h3>
+                    <a zippy="addnew" class="btn btn-outline-primary">Додати</a>
+                </div>
 
-                            <th></th>
-                        </tr>
-                        <tr zippy="mflist">
-                            <td zippy="mf_name"></td>
-                            {{#usebranch}}
-                            <td zippy="branch"></td>
-                            {{/usebranch}}
-
-                            <td zippy="description"></td>
-                            <td class="text-end" zippy="amount"></td>
-
-                            <td style="width:75px"><a zippy="edit" title="Редагувати"><i class="fa fa-edit"></i></a>
-                          &nbsp;&nbsp;      <a zippy="delete" title="Вилучити"><i class="fa fa-trash"></i></a>
-                            </td>
-                        </tr>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead>
+                            <tr>
+                                <th>Назва</th>
+                                {{#usebranch}}<th>Філія</th>{{/usebranch}}
+                                <th>Опис</th>
+                                <th class="text-end">Баланс</th>
+                                <th style="width:75px"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr zippy="mflist">
+                                <td zippy="mf_name"></td>
+                                {{#usebranch}}<td zippy="branch"></td>{{/usebranch}}
+                                <td zippy="description"></td>
+                                <td class="text-end" zippy="amount"></td>
+                                <td class="text-nowrap">
+                                    <a zippy="edit" title="Редагувати" class="me-2"><i class="fa fa-edit"></i></a>
+                                    <a zippy="delete" title="Вилучити"><i class="fa fa-trash"></i></a>
+                                </td>
+                            </tr>
+                        </tbody>
                     </table>
-
-
                 </div>
-
-
             </div>
-        </div>
 
-                <form zippy="mfdetail">
-        <div class="row">
-            <div class="col-6 col-lg-4 col-xl-3">
-                    <div class="form-group">
-                        <label for="editmf_name">Назва</label>
-                        <input autofocus="on"   class="form-control" zippy="editmf_name"/>
-                    </div>
-                    <div class="form-check">
-                        <input zippy="editbeznal" type="checkbox" class="form-check-input">
-                        <label class="form-check-label" for="editbeznal">Безготiвковий рахунок</label>
-
-                    </div>
-           
-                   <div class="form-group">
-                        <label for="editcom" data-label="editcom">Комiсiя, процент</label>
-                        <input style="width:100px" pattern="[0-9,\.]+" class="form-control qtyprice" zippy="editcom"/>
-                        <small data-label="editcom">Наприклад комiсiя IМ. Списується як витрати </small>
-                    </div>
-           
-           
-                    
-                    {{#usebranch}}
-                    <div class="form-group">
-                        <label for="editbranch">Філія</label>
-                        <select class="form-control" zippy="editbranch">
-                            <option value="0">Не обрано</option>
-                        </select>
-                    </div>
-                    {{/usebranch}}
-                    <div class="form-group">
-                        <label for="editmf_description">Опис</label>
-                        <textarea class="form-control" zippy="editmf_description"></textarea>
-                    </div>
-                 <div class="form-check">
-                    <input zippy="editdisabled" type="checkbox" class="form-check-input">
-                    <label class="form-check-label" for="editdisabled">Не використовується</label>
+            <div class="mt-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="mb-0">Баланс</h3>
+                    <h3 class="mb-0 fs-5 fw-semibold" id="summa"></h3>
                 </div>
-           </div>
-            <div class="col-6 col-lg-4 col-xl-3">
-                    <div class="form-group">
-                        <label for="editbank" data-label="editbank">Назва  банку, МФО </label>
-                        <input class="form-control" type="text" zippy="editbank">
+
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th class="text-end fs-5">Максим</th>
+                            <th class="text-end fs-5">Роман</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td id="sum_m" class="text-end fs-5 fw-semibold"></td>
+                            <td id="sum_r" class="text-end fs-5 fw-semibold"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <form zippy="mfdetail">
+                <div class="row g-4">
+
+                    <div class="col-12 col-lg-6 col-xl-4">
+                        <div class="mb-3">
+                            <label for="editmf_name" class="form-label">Назва</label>
+                            <input autofocus="on" class="form-control" zippy="editmf_name">
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input zippy="editbeznal" type="checkbox" class="form-check-input" id="editbeznal">
+                            <label class="form-check-label" for="editbeznal">Безготівковий рахунок</label>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="editcom" class="form-label" data-label="editcom">Комісія, процент</label>
+                            <input style="width:100px" pattern="[0-9,\.]+" class="form-control qtyprice" zippy="editcom">
+                            <div class="form-text" data-label="editcom">Наприклад комісія ІМ. Списується як витрати</div>
+                        </div>
+
+                        {{#usebranch}}
+                        <div class="mb-3">
+                            <label for="editbranch" class="form-label">Філія</label>
+                            <select class="form-select" zippy="editbranch">
+                                <option value="0">Не обрано</option>
+                            </select>
+                        </div>
+                        {{/usebranch}}
+
+                        <div class="mb-3">
+                            <label for="editmf_description" class="form-label">Опис</label>
+                            <textarea class="form-control" zippy="editmf_description"></textarea>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input zippy="editdisabled" type="checkbox" class="form-check-input" id="editdisabled">
+                            <label class="form-check-label" for="editdisabled">Не використовується</label>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="editbankacc" data-label="editbankacc">Розрахунковий рахунок</label>
-                        <input class="form-control" type="text" zippy="editbankacc">
-                    </div>
-                     <div class="form-group">
-                        <label for="editiban" data-label="editiban">IBAN</label>
-                        <input class="form-control" type="text" zippy="editiban">
-                   </div> 
-                    <div class="form-group">
-                            <label for="editpayname" data-label="editpayname">Платник/Одержувач</label>
+
+                    <div class="col-12 col-lg-6 col-xl-4">
+                        <div class="mb-3">
+                            <label for="editbank" class="form-label" data-label="editbank">Назва банку, МФО</label>
+                            <input class="form-control" type="text" zippy="editbank">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="editbankacc" class="form-label" data-label="editbankacc">Розрахунковий рахунок</label>
+                            <input class="form-control" type="text" zippy="editbankacc">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="editiban" class="form-label" data-label="editiban">IBAN</label>
+                            <input class="form-control" type="text" zippy="editiban">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="editpayname" class="form-label" data-label="editpayname">Платник/Одержувач</label>
                             <input class="form-control" type="text" zippy="editpayname">
-                            
-                    </div>                    
-                                 
-                    <div class="form-group row">
-                            <label class="col-6 col-form-label" for="edittin" data-label="edittin">ЄДРПОУ/IПН</label>
+                        </div>
+
+                        <div class="row align-items-center mb-3">
+                            <label class="col-6 col-form-label" for="edittin" data-label="edittin">ЄДРПОУ/ІПН</label>
                             <div class="col-6">
                                 <input class="form-control" type="text" zippy="edittin">
                             </div>
-                            
-                                        
-                    </div>                    
-                          
-                    <div class="form-group row">
-                        <label class="col-8 col-form-label" for="editbtran" data-label="editbtran">Процент банку, видаток</label>
-                        <div class="col-4">
-                          <input style="width:100px" pattern="[0-9,\.]+" class="form-control qtyprice" zippy="editbtran"/>
-                         </div>
-                        <small  data-label="editbtran">Процент, який банк бере за перевод суми з рахунку. </small>
-                    </div>
-                    <div class="form-group row">
-                        <label class="col-8 col-form-label" for="editbtranin" data-label="editbtranin">Процент банку, прибуток</label>
-                        <div class="col-4">
-                          <input style="width:100px" pattern="[0-9,\.]+" class="form-control qtyprice" zippy="editbtranin"/>
                         </div>
-                        <small data-label="editbtranin">Процент, який банк бере за переказ суми на рахунок </small>
-                    </div>
-                     <div class="form-check">
-                        <input zippy="editback" type="checkbox" class="form-check-input">
-                        <label  data-label="editback" class="form-check-label" for="editback">Повертати процент при поверненнi товару</label>
-                    </div>
-     
-           </div>
 
-            <div class="col-12 mt-3">
-                   
-                
-                
-                  <div class="form-group">
-                    <input zippy="cancel" type="button" value="Скасувати" class="btn btn-primary me-2 ">
-                    <input zippy="save" type="submit" value="Зберегти" class="btn btn-primary  ">
-                    
-                 </div>
-            </div>
-       
+                        <div class="row align-items-center mb-3">
+                            <label class="col-8 col-form-label" for="editbtran" data-label="editbtran">Процент банку, видаток</label>
+                            <div class="col-4">
+                                <input style="width:100px" pattern="[0-9,\.]+" class="form-control qtyprice" zippy="editbtran">
+                            </div>
+                            <div class="col-12">
+                                <div class="form-text" data-label="editbtran">Процент, який банк бере за перевод суми з рахунку.</div>
+                            </div>
+                        </div>
+
+                        <div class="row align-items-center mb-3">
+                            <label class="col-8 col-form-label" for="editbtranin" data-label="editbtranin">Процент банку, прибуток</label>
+                            <div class="col-4">
+                                <input style="width:100px" pattern="[0-9,\.]+" class="form-control qtyprice" zippy="editbtranin">
+                            </div>
+                            <div class="col-12">
+                                <div class="form-text" data-label="editbtranin">Процент, який банк бере за переказ суми на рахунок</div>
+                            </div>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input zippy="editback" type="checkbox" class="form-check-input" id="editback">
+                            <label data-label="editback" class="form-check-label" for="editback">Повертати процент при поверненні товару</label>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <div class="d-flex gap-2">
+                            <input zippy="cancel" type="button" value="Скасувати" class="btn btn-outline-primary">
+                            <input zippy="save" type="submit" value="Зберегти" class="btn btn-primary">
+                        </div>
+                    </div>
+
+                </div>
+            </form>
         </div>
-                </form>
+    </div>
+</div>
 
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let ids = ['amount_1','amount_2','amount_3','amount_4','amount_5'];
+    let a = ids.map(id => document.getElementById(id));
 
-    </body>
+    if (a.some(x => !x)) return;
+
+    let s = a.map(x => Math.round(parseFloat(x.textContent) || 0));
+    let sum = s.reduce((x, y) => x + y, 0) / 2;
+    let sum_m = sum - s[0] - s[1] - s[4];
+    let sum_r = sum - s[2] - s[3];
+    let summa = s.reduce((x, y) => x + y, 0);
+
+    document.getElementById('sum_m').textContent = sum_m;
+    document.getElementById('sum_r').textContent = sum_r;
+    document.getElementById('summa').textContent = summa;
+
+    document.getElementById('sum_m').classList.add(sum_m < 0 ? 'text-danger' : 'text-success');
+    document.getElementById('sum_r').classList.add(sum_r < 0 ? 'text-danger' : 'text-success');
+});
+</script>
+
+</body>
 </html>

@@ -87,7 +87,7 @@ class Items extends \App\Pages\Base
         if (!isset($data)) {
 
             $this->setError("Невірна відповідь");
-           // \App\Helper::log($json);
+            \App\Helper::log($json);
             return;
         }
         if ($data['error'] == "") {
@@ -191,39 +191,86 @@ class Items extends \App\Pages\Base
         $cat = $this->upd->updcat->getValue();
 
         $elist = array();
-        
-        foreach (Item::findYield("disabled <> 1  ". ($cat>0 ? " and cat_id=".$cat : "")) as $item) {
-            if (strlen($item->item_code) == 0) {
+    // Обновление остатков для товаров без комплектующих
+    foreach (Item::findYield("disabled <> 1  " . ($cat > 0 ? " and cat_id=" . $cat : "")) as $item) {
+        if (strlen($item->item_code) == 0) {
+            continue;
+        }
+
+        $qty = $item->getQuantity(32);
+        $elist[$item->item_code] = round($qty);
+    }
+    // Расчет количества товаров с комплектующими
+    $detail3 = array();  // Инициализация массива $detail3
+    foreach (\App\Entity\Item::findYield("disabled<> 1 and item_id in(select pitem_id from item_set)", "itemname") as $it) {
+        $max = 500;
+        $parts = \App\Entity\ItemSet::find("pitem_id=" . $it->item_id);
+
+        foreach ($parts as $part) {
+            $pi = \App\Entity\item::load($part->item_id);
+            if ($pi == null) {
                 continue;
             }
-
-            $qty = $item->getQuantity();
-            $elist[$item->item_code] = round($qty);
+            $pqty = $pi->getQuantity(32);
+            if ($pqty == 0) {
+                $max = 0;
+                continue;
+            }
+            $t = $pqty / $part->qty;
+            if ($t < $max) {
+                $max = $t;
+            }
+        }
+        if ($max <= 0 || $max == 500) {
+            continue;
         }
 
-        $data = json_encode($elist);
-
-        $fields = array(
-            'data' => $data
+        $detail3[] = array(
+            "code" => $it->item_code,
+            "name" => $it->itemname,
+            "qty"  => floor(H::fqty(($max) * 0.95)),
         );
-        $url = $modules['ocsite'] . '/index.php?route=api/zstore/updatequantity&' . System::getSession()->octoken;
-        if($modules['ocv4']==1) {
-            $url = $modules['ocsite'] . '/index.php?route=api/zstore.updatequantity&' . System::getSession()->octoken;
-        }
-        $json = Helper::do_curl_request($url, $fields);
-        if ($json === false) {
-            return;
-        }
-        $data = json_decode($json, true);
-
-        if ($data['error'] != "") {
-            $data['error']  = str_replace("'", "`", $data['error']) ;
-
-            $this->setErrorTopPage($data['error']);
-            return;
-        }
-        $this->setSuccess('Оновлено');
     }
+
+    // Добавление результатов расчета к списку для обновления
+    foreach ($detail3 as $item) {
+        // Используем фактические остатки из первого цикла
+        $actualQty = isset($elist[$item['code']]) ? $elist[$item['code']] : 0;
+
+        // Добавляем остаток + возможное производство
+        $elist[$item['code']] = floor($item['qty'] + $actualQty);
+		}
+
+
+
+    $data = json_encode($elist);
+   //H::log( json_encode($data));
+    $fields = array(
+        'data' => $data
+    );
+
+    $url = $modules['ocsite'] . '/index.php?route=api/zstore/updatequantity&' . System::getSession()->octoken;
+
+    if ($modules['ocv4'] == 1) {
+        $url = $modules['ocsite'] . '/index.php?route=api/zstore.updatequantity&' . System::getSession()->octoken;
+    }
+
+    $json = Helper::do_curl_request($url, $fields);
+   //H::log( json_encode($fields));
+    if ($json === false) {
+        return;
+    }
+
+    $data = json_decode($json, true);
+
+    if ($data['error'] != "") {
+        $data['error'] = str_replace("'", "`", $data['error']);
+        $this->setErrorTopPage($data['error']);
+        return;
+    }
+
+    $this->setSuccess('Оновлено');
+}
 
 
     public function onUpdatePrice($sender) {
@@ -347,7 +394,7 @@ class Items extends \App\Pages\Base
                     $image = new \App\Entity\Image();
                     $image->content = $im;
                     $image->mime = $imagedata['mime'];
-                
+				
 
                     $image->save();
                     $item->image_id = $image->image_id;

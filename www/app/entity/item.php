@@ -662,7 +662,7 @@ class Item extends \ZCL\DB\Entity
      */
     public function getQuantity($store_id = 0, $snumber = "", $date=0, $emp=0) {
         $cstr = \App\ACL::getStoreBranchConstraint();
-        if (strlen($cstr) > 0  ) {
+        if (strlen($cstr) > 0) {
             $cstr = "    store_id in ({$cstr})  and   ";
         }
 
@@ -883,42 +883,26 @@ class Item extends \ZCL\DB\Entity
      *
      */
     public static function getNextArticle() {
-        
-        if (\App\System::getOption("common", "autoarticle") != 1) {
-            return "";    //не генерим
-        }        
-        $options = \App\System::getOptions('common');
-            
         $conn = \ZDB\DB::getConnect();
-        $letters = $options['articleprefix'] ?? "ID";
-        $like= $letters=="" ?"" : " like '{$letters}%'" ;
-        $last=0;
-        $sql = "select item_code from  items where disabled=0 and item_code {$like}   order  by  item_id desc   ";  
+        $sql = "  select coalesce(max(item_id),0)   from  items ";
  
-        foreach($conn->Execute($sql) as $row) {
-           $digits = intval( preg_replace('/[^0-9]/', '', $row['item_code']) );
-           if($digits > $last) {
-              $last =  $digits ; //максимальная цифра
-           }
-        }
-        
-        $last++;
-          
-      //  $l =  gmp_init($last, 10);
-     //   $l=   gmp_add( $l , (gmp_init(1))) ;
-      //  $last = gmp_strval($l, 10);
-        
-        $d=5;
-        if( strlen( ''.$last) >$d){ //если не  влазит
-           $d =  strlen( ''.$last); 
-        }
-        if(strlen($letters) >0){
-           $next = "".$letters . sprintf("%0{$d}d", $last);
-        } else {
-           $next = "".$last;
-        }
+        $id = $conn->GetOne($sql);
+        if($id>0) {
+            $last = Item::load($id);
 
-        return $next;
+            if(strpos($last->item_code, "ID") == 0) {
+                $a =  str_replace("ID", "", $last->item_code);
+
+                $a = intval($a);
+
+                if($a >0) {
+
+                    $id = $a;
+                }
+
+            }
+        }
+        return "" . sprintf("%04d", ++$id);
     }
 
     /**
@@ -935,11 +919,11 @@ class Item extends \ZCL\DB\Entity
         $code = Item::qstr($this->item_code);
         
         if(strlen($this->manufacturer)==0){
-            $where = " disabled=0 and item_id <> {$this->item_id} and  item_code={$code} ";  
+            $where = "item_id <> {$this->item_id} and  item_code={$code} ";  
         }  else {
              $manufacturer = Item::qstr($this->manufacturer);
 
-             $where = " disabled=0 and item_id <> {$this->item_id} and ( item_code={$code} and manufacturer= {$manufacturer} )";  
+             $where = "item_id <> {$this->item_id} and ( item_code={$code} and manufacturer= {$manufacturer} )";  
         }
         $cnt = Item::findCnt($where);
         if ($cnt > 0) {
@@ -990,42 +974,61 @@ class Item extends \ZCL\DB\Entity
      * себестоимость  для  готовой продукции
      *
      */
-    public function getProdprice() {
-        $price = 0;
-        if ($this->costprice > 0) {
-            $price += doubleval($this->costprice);
-        }
-        else {
-            $ilist = \App\Entity\ItemSet::find("pitem_id=" . $this->item_id);
+   public function getProdprice() {
 
-            if (count($ilist) > 0) {
-                foreach ($ilist as $iset) {
+    $price = 0;
 
-                    if($iset->item_id > 0) {
-                        $it = \App\Entity\Item::load($iset->item_id);
-                        $pr = $it->getPartion(0);
-                        $price += doubleval($iset->qty * $pr);
+    if ($this->costprice > 0) {
+
+        $price += doubleval($this->costprice);
+
+    } else {
+
+        $ilist = \App\Entity\ItemSet::find("pitem_id=" . $this->item_id);
+
+        if (count($ilist) > 0) {
+
+            foreach ($ilist as $iset) {
+
+                if ($iset->item_id > 0) {
+
+                    $it = \App\Entity\Item::load($iset->item_id);
+
+                    // Проверка что товар найден
+                    if ($it == null) {
+                        continue;
                     }
-                    if($iset->service_id >0) {
-                        $price += doubleval($iset->cost);
 
-                    }
+                    $pr = $it->getPartion(0);
+
+                    $price += doubleval($iset->qty * $pr);
+                }
+
+                if ($iset->service_id > 0) {
+
+                    $price += doubleval($iset->cost);
                 }
             }
-            
         }
-        
-        if ($price == 0) {   
-            $price = $this->getPartion();
-        }
-        if($price==0) {
-            $price = $this->getLastPartion() ;
-        }
-        if($price==0) {
-            \App\System::setWarnMsg("Для {$this->itemname} не  вирахувано собївартїсть") ;
-        }
-        return $price;
     }
+
+    if ($price == 0) {
+        $price = $this->getPartion();
+    }
+
+    if ($price == 0) {
+        $price = $this->getLastPartion();
+    }
+
+    if ($price == 0) {
+
+        \App\System::setWarnMsg(
+            "Для {$this->itemname} не вирахувано собївартїсть"
+        );
+    }
+
+    return $price;
+}
 
 
     public function getID() {
@@ -1043,8 +1046,8 @@ class Item extends \ZCL\DB\Entity
    
         $price=doubleval(\App\Helper::fa($price));
         $qty=doubleval(\App\Helper::fqty($qty));
-          
-        $barcode = "".$price.'-'.$qty. '-' . $item_id;  
+        $barcode = "".$item_id.'-'.$qty;  
+        //$barcode = "".$price.'-'.$qty. '-' . $item_id;
         
         return $barcode;
      }
@@ -1261,9 +1264,8 @@ class Item extends \ZCL\DB\Entity
     * @param mixed $requires  количество
     * @param mixed $store  со  склада
     * @param mixed $document_id  документ
-    * @param mixed $reserve  резервирование
     */
-    public   function setToProd($required,$store,$document_id,$reserve=false) {
+    public   function setToProd($required,$store,$document_id) {
         $common= \App\System::getOptions('common') ;
         if( ($common['storepart'] ?? 0) > 0) {
            $store = $common['storepart'] ;
@@ -1298,7 +1300,7 @@ class Item extends \ZCL\DB\Entity
             foreach ($listst as $st) {
                 $sc = new \App\Entity\Entry($document_id, 0 - $st->quantity * $st->partion, 0 - $st->quantity);
                 $sc->setStock($st->stock_id);
-                $sc->tag=  $reserve ? \App\Entity\Entry::TAG_RESERV :  \App\Entity\Entry::TAG_TOPROD;
+                $sc->tag=\App\Entity\Entry::TAG_TOPROD;
 
                 $sc->save();
                 if ($kl > 0) {
@@ -1307,29 +1309,14 @@ class Item extends \ZCL\DB\Entity
             }
             
         }
-        if ($lost > 0 && $reserve==false) {
+        if ($lost > 0) {
             $io = new \App\Entity\IOState();
             $io->document_id = $document_id;
             $io->amount =  0 - abs($lost);
-            $io->iotype =  \App\Entity\IOState::TYPE_TRASH;
+            $io->iotype = \App\Entity\IOState::TYPE_TRASH;
 
             $io->save();
        }             
     }
-   
-   
-   /**
-   *  гарантийный срок
-   *  если задан срок  голности вычисляет  от текущей даты
-   */
-    public function getTerm(){
-        if(strlen($this->warranty)>0){
-           return  $this->warranty;
-        }
-        if(intval($this->term ??0)>0){
-           return "до ". \App\Helper::fd( strtotime("+{$this->term} days")  );  ; 
-        }
-        return "";
-    }
-    
+         
 }

@@ -81,7 +81,6 @@ class Inventory extends \App\Pages\Base
         $this->editdetail->add(new Button('cancelrow'))->onClick($this, 'cancelrowOnClick');
         $this->add(new \App\Widgets\ItemSel('wselitem', $this, 'onSelectItem'))->setVisible(false);
         $this->editdetail->add(new ClickLink('openitemsel', $this, 'onOpenItemSel'));
- 
         if ($docid > 0) {    //загружаем   содержимое  документа на страницу
             $this->_doc = Document::load($docid)->cast();
             $this->docform->document_number->setText($this->_doc->document_number);
@@ -153,6 +152,7 @@ class Inventory extends \App\Pages\Base
         $this->docform->detail->Reload();
     }
 
+
     public function addrowOnClick($sender) {
         if ($this->docform->store->getValue() == 0) {
             $this->setError("Не обрано склад");
@@ -198,7 +198,6 @@ class Inventory extends \App\Pages\Base
         $this->docform->setVisible(true);
         $this->docform->detail->Reload();
         $this->wselitem->setVisible(false);
-   
         //очищаем  форму
         $this->editdetail->edititem->setKey(0);
         $this->editdetail->edititem->setValue('');
@@ -286,7 +285,7 @@ class Inventory extends \App\Pages\Base
 
             $logger->error( $ee->getMessage()  );
             $logger->error( $ee->getTraceAsString()  );
-
+			
             return;
         }
     }
@@ -356,18 +355,16 @@ class Inventory extends \App\Pages\Base
     public function OnAutocompleteItem($sender) {
         $store_id = $this->docform->store->getValue();
         $text = trim($sender->getText());
-        $cat_id = intval($this->docform->category->getIntValue());
+        $cat_id = intval($this->docform->category->getValue());
         $common = \App\System::getOptions('common')  ;
         if($common['usecattree'] != 1 || $cat_id==0) {
             return Item::findArrayAC($text, $store_id, $cat_id);
         }
-        $ret = array();
-        
+
         $c = Category::load($cat_id) ;
         $ch = $c==null ? [] :  $c->getChildren();
         $ch[]=$cat_id;
-        $ch[] = 0;
-      
+        $ret = array();
         foreach($ch as $id) {
             foreach(Item::findArrayAC($text, $store_id, intval( $id )) as $k=>$v) {
                 $ret[$k]=$v;
@@ -407,8 +404,9 @@ class Inventory extends \App\Pages\Base
         }
         
         foreach (Item::findYield($w, 'itemname') as $item) {
-            $item->qfact = 0;
+            
             $item->quantity = $item->getQuantity($store_id,"",0,$storeemp_id);
+            $item->qfact = (floor($item->quantity) == $item->quantity) ? intval($item->quantity) : round($item->quantity, 2);
             $this->_itemlist[$item->item_id] = $item;
         }
         $this->docform->detail->Reload();
@@ -423,10 +421,10 @@ class Inventory extends \App\Pages\Base
       
   
 
-        $store =   $this->docform->store->getIntValue();
+        $store = $this->docform->store->getValue();
       
 
-        $cat_id = $this->docform->category->getIntValue();
+        $cat_id = $this->docform->category->getValue();
       
         $item = Item::findBarCode($code,$store,$cat_id );
 
@@ -469,8 +467,8 @@ class Inventory extends \App\Pages\Base
 
 
         if (!isset($this->_itemlist[$item->item_id])) {
-            $item->qfact = 0;
             $item->quantity = $item->getQuantity($store);
+            $item->qfact = (floor($item->quantity) == $item->quantity) ? intval($item->quantity) : round($item->quantity, 2);
             $this->_itemlist[$item->item_id] = $item;
         }
 
@@ -510,6 +508,6 @@ class Inventory extends \App\Pages\Base
         $this->editdetail->edititem->setKey($item_id);
         $this->editdetail->edititem->setText($itemname);
        
-    }    
+    }
     
 }

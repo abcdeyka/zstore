@@ -38,9 +38,9 @@ class Orders extends \App\Pages\Base
             $this->setWarn('Нажміть перевірити з`єднання  ');
         }
 
-        $defpaytype=intval($modules['ocpaytype']??0);
+        $defpaytype=intval($modules['ocpaytype']??2);
         $defstore=intval($modules['ocstore']);
-        $defmf=intval($modules['ocmf']??0);
+        $defmf=intval($modules['ocmf']);
            
         
         $this->add(new Form('filter'))->onSubmit($this, 'filterOnSubmit');
@@ -90,7 +90,7 @@ class Orders extends \App\Pages\Base
         $data = json_decode($json, true);
         if (!isset($data)) {
             $this->setError("Невірна відповідь");
-         //   \App\Helper::log($json);
+            \App\Helper::log($json);
             return;
         }
         if ($data['error'] == "") {
@@ -136,11 +136,7 @@ class Orders extends \App\Pages\Base
     }
 
     public function onImport($sender) {
-        $pt=$sender->paytype->getValue() ;
-        if($pt==0){
-            $this->setError('Не вказано тип оплати')  ;
-            return;
-        } 
+          
         if($sender->paytype->getValue() ==4) {
             $this->onOutcome( );            
         }   else{
@@ -148,19 +144,33 @@ class Orders extends \App\Pages\Base
         }
         
     }
+
     public function onOrder(  ) {
+		
+		
         $defpaytype = $this->filter2->paytype->getValue() ;
             
         $modules = System::getOptions("modules");
         $defstore=intval($modules['ocstoreid']);
         $defmf=intval($modules['ocmf']);
+
+        /*
+         * Соответствие способов доставки OpenCart
+         * и типов доставки ZStore
+         */
+        $delivery_mapping = [
+            'novaposhta.department'         => Document::DEL_NP,
+            'novaposhta.poshtomat'          => Document::DEL_NP,
+            'pickup.pickup'                 => Document::DEL_SELF,
+            'rozetka_delivery.department'   => Document::DEL_ROZ,
+            'ukrposhta.standard_department' => Document::DEL_UP,
+            'ukrposhta.express_department'  => Document::DEL_UP,
+            'novaposhta.doors'              => Document::DEL_NP
+        ];
  
         $i = 0;
-        $conn = \ZDB\DB::getConnect();
-        $conn->BeginTrans();
 
-        try{     
-           foreach ($this->_neworders as $shoporder) {
+        foreach ($this->_neworders as $shoporder) {
 
 
             $neworder = Document::create('Order');
@@ -211,18 +221,28 @@ class Orders extends \App\Pages\Base
             $neworder->headerdata['totaldisc']  = $neworder->amount - $neworder->payamount;
 
 
-            $neworder->headerdata['outnumber'] = $shoporder->order_id;
+			$neworder->headerdata['outnumber'] = $shoporder->order_id;
             $neworder->headerdata['ocorder'] = $shoporder->order_id;
             $neworder->headerdata['ocorderback'] = 0;
             $neworder->headerdata['pricetype'] = 'price1';
             $neworder->headerdata['salesource'] = $modules['ocsalesource'];
             $neworder->headerdata['paytype'] = $defpaytype;  
-            $neworder->headerdata['paytypename'] = $this->filter2->paytype->getValueName() ;  
+            $neworder->headerdata['paytypename'] = $shoporder->payment_method;
             $neworder->headerdata['payment'] = $defmf ; 
+
+            // Данные клиента
+            $neworder->headerdata['phone'] = \App\Util::handlePhone($shoporder->telephone);
+            $neworder->headerdata['email'] = $shoporder->email;
+
+            // Данные доставки
+            $neworder->headerdata['delivery'] = $delivery_mapping[$shoporder->shipping_code] ?? $shoporder->shipping_code;
+            $neworder->headerdata['delivery_name'] = $shoporder->shipping_method;
+            $neworder->headerdata['ship_address'] = $shoporder->shipping_city . ', ' . $shoporder->shipping_address_1;
+
             if($neworder->headerdata['paytype']==2) {
                 $neworder->headerdata['waitpay'] =1;   //ждет оплату
             }
-            $neworder->headerdata['store'] = $defstore ; 
+            $neworder->headerdata['store'] = $defstore ;  
       
             $neworder->notes = "OC номер: {$shoporder->order_id};";
 
@@ -262,58 +282,54 @@ class Orders extends \App\Pages\Base
                 }
             }
             if (strlen($shoporder->email) > 0) {
-                $neworder->notes .= " Email:" . $shoporder->email . ";";
+                $neworder->notes .= " " . $shoporder->email . ",";
             }
             if (strlen($shoporder->telephone) > 0) {
-                $neworder->notes .= " Тел: " . $shoporder->telephone . ";";
-                $neworder->headerdata['phone'] = $phone;            
+                $neworder->notes .= " " . $shoporder->telephone . ",";
             }
-            $neworder->notes .= " Адреса:" . $shoporder->shipping_city . ' ' . $shoporder->shipping_address_1 . ";";
-            $neworder->notes .= " Оплата:" . $shoporder->payment_method . ";";
-            $neworder->notes .= " Коментар:" . $shoporder->comment . ";";
+            $neworder->notes .= " " . $shoporder->shipping_city . ' ' . $shoporder->shipping_address_1 . ",";
+            // Предположим, что у нас есть три различных значения для $shoporder->payment_method и соответствующие id
+            $paymentMethod1 = "Оплата банківським додатком у телефоні";
+            $paymentMethod2 = "Оплата банковским приложением в телефоне";
+            $paymentMethod3 = "Наложенный платеж";
+            $paymentMethod4 = "Післяплата";
+            $paymentMethod5 = "Оплата наличными";
+            $paymentMethod6 = "Оплата готівкою";
+            $id1 = 10; // ID для первого варианта Карта Рома
+            $id2 = 11; // ID для второго варианта Карта Макса	
+            $id3 = 9; // ID для третьего варианта Касса Поправки
+            // Добавляем значение $shoporder->payment_method в $neworder->notes
+            $neworder->notes .= " " . $shoporder->payment_method . ",";
             
-            $neworder->headerdata['ship_address']  = $shoporder->shipping_city . ' ' . $shoporder->shipping_address_1  ;
-            
-            if($modules['ocmf'] >0) {
-               $neworder->headerdata['payment'] = $modules['ocmf'];
-        
+            // Устанавливаем соответствующий $neworder->headerdata['payment']
+            if ($shoporder->payment_method == $paymentMethod1 || $shoporder->payment_method == $paymentMethod2) {
+                // Если условие выполняется для первого или второго варианта
+                $neworder->headerdata['payment'] = $id1;
+            } elseif ($shoporder->payment_method == $paymentMethod3 || $shoporder->payment_method == $paymentMethod4) {
+                // Если условие выполняется для третьего или четвертого варианта
+                $neworder->headerdata['payment'] = $id1;
+            } elseif ($shoporder->payment_method == $paymentMethod5 || $shoporder->payment_method == $paymentMethod6) {
+                // Если условие выполняется для пятого или шестого варианта
+                $neworder->headerdata['payment'] = $id3;
             }
-            if ($neworder->headerdata['paytype'] == 2) {
-                $neworder->setHD('waitpay',1); 
-            }        
-           
-        
-                $neworder->save();
-                
-                 
-                $neworder->updateStatus(Document::STATE_NEW);
-      
-                $neworder->updateStatus(\App\Entity\Doc\Document::STATE_WAIT);
-              
-                if($neworder->headerdata['store']>0) {
-                    $neworder->reserve();   //если задан  склад резервируем товары
-                }  
-      
-           
+            $neworder->notes .= " " . $shoporder->comment . ".";
+//			$neworder->headerdata['payment'] = $modules['ocmf'];
+            $neworder->save();
+            
+            
+             
+            $neworder->updateStatus(Document::STATE_NEW);
+  
+            $neworder->updateStatus(\App\Entity\Doc\Document::STATE_INPROCESS);
+          
+            if($neworder->headerdata['store']>0) {
+                $neworder->reserve();   //если задан  склад резервируем товары
+            }
+
             $i++;
         }
-        
-           $conn->CommitTrans();
-          
-        } catch(\Throwable $ee){
-            global $logger;
-            $conn->RollbackTrans();
-           
-            $this->setError($ee->getMessage());
-
-            $logger->error( $ee->getMessage() . " OCStore " );
-                 
-           
-            return;
-        }        
-        
         $this->setInfo("Імпортовано {$i} замовлень");
-        
+
         $this->_neworders = array();
         $this->neworderslist->Reload();
     }
@@ -423,16 +439,16 @@ class Orders extends \App\Pages\Base
 
                 $neworder->payamount = 0;
                 $neworder->payed = 0;
-                $neworder->notes = "OC номер:{$shoporder->order_id};";
-                $neworder->notes .= " Клiєнт:" . $shoporder->firstname . ' ' . $shoporder->lastname . ";";
+                $neworder->notes = "OC {$shoporder->order_id},";
+                $neworder->notes .= " " . $shoporder->firstname . ' ' . $shoporder->lastname . ",";
                 if (strlen($shoporder->email) > 0) {
-                    $neworder->notes .= " Email:" . $shoporder->email . ";";
+                    $neworder->notes .= " " . $shoporder->email . ",";
                 }
                 if (strlen($shoporder->telephone) > 0) {
-                    $neworder->notes .= " Тел:" . $shoporder->telephone . ";";
+                    $neworder->notes .= " " . $shoporder->telephone . ",";
                 }
-                $neworder->notes .= " Адреса:" . $shoporder->shipping_city . ' ' . $shoporder->shipping_address_1 . ";";
-                $neworder->notes .= " Коментар:" . $shoporder->comment . ";";
+                $neworder->notes .= " " . $shoporder->shipping_city . ' ' . $shoporder->shipping_address_1 . ",";
+                $neworder->notes .= "" . $shoporder->comment . ".";
                 $neworder->save();
                 $neworder->updateStatus(Document::STATE_NEW);
                 $neworder->updateStatus(Document::STATE_EXECUTED);

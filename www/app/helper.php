@@ -19,7 +19,7 @@ class Helper
     public const STAT_DOC_ISEDITED = 7;     //редактируется документ
     public const STAT_DOC_TMP      = 8;     //временные  данные
     public const STAT_SUBS_FIRE    = 9;     //событие подписки
-
+	
     private static $meta = array(); //кеширует метаданные
 
     /**
@@ -496,6 +496,7 @@ class Helper
         $logger->error($msg);
     }
 
+ 
     /**
      * Возвращает склад  по  умолчанию
      *
@@ -600,36 +601,31 @@ class Helper
      * Форматирование количества
      *
      * @param mixed $qty
-     * @param mixed $check    убрать нули после  запятой (для печати в  чеках)
      * @return mixed
      */
-    public static function fqty($qty,$check=false) {
+    public static function fqty($qty) {
         if(strlen('' . $qty) == 0) {
             return '';
         }
         if(is_numeric($qty) && abs($qty) < 0.0005) {
             $qty = 0;
+			}
+            $qty = str_replace(',', '.', $qty);
+            $qty = preg_replace("/[^0-9\.\-]/", "", $qty);
+        
+            // Получаем количество знаков после запятой из настроек
+            $common = System::getOptions("common");
+            $qtydigits = $common['qtydigits'];
+        
+            // Приводим к числовому типу
+            $qty = floatval($qty);
+        
+            // Форматируем с нужным количеством знаков после запятой
+            $formattedQty = number_format($qty, $qtydigits, '.', '');
+        
+            // Убираем лишние нули
+            return rtrim(rtrim($formattedQty, '0'), '.');
         }
-        $qty = str_replace(',', '.', $qty);
-        $qty = preg_replace("/[^0-9\.\-]/", "", $qty);
-
-        $common = System::getOptions("common");
-        if($common['qtydigits'] > 0) {
-            
-           $r = number_format(doubleval($qty), $common['qtydigits'], '.', '');
-           if($check) {
-             $r= rtrim($r,'0') ;
-             $r= rtrim($r,'0') ;
-             $r= rtrim($r,'0') ;
-             $r= rtrim($r,'.') ;
-             
-           }
-           return $r;
-           
-        } else {
-            return intval($qty);
-        }
-    }
 
     /**
      * форматирование  сумм  c  одной   цифрой  после  зарятой
@@ -777,7 +773,6 @@ class Helper
                 $data['phone'] = $branch->phone;
             }
         }
-      
         return $data;
     }
 
@@ -812,6 +807,7 @@ class Helper
         }
         return 10;
     }
+
 
     /**
      * список валют
@@ -883,12 +879,12 @@ class Helper
         }
 
         foreach($data as $k => $v) {
-             
+
             if(is_array($v)) {
                 $v['format']   = $v['format'] ??'';
                 $v['bold']     = $v['bold'] ??'';
                 $v['align']    = $v['align'] ??'';
-   
+				
                 $c = $sheet->getCell($k);
                 $style = $sheet->getStyle($k);
                 if($v['format'] == 'date') {
@@ -952,6 +948,7 @@ class Helper
         die;
     }
 
+
     public static function exportExcelFromCSV($csvfile) {
 
         $reader = new \PhpOffice\PhpSpreadsheet\Reader\Csv();
@@ -988,7 +985,6 @@ class Helper
      * @param mixed $key
      * @return mixed
      */
-
     public static function getKeyVal($key, $def = "") {
         if(strlen($key) == 0) {
             return;
@@ -1027,6 +1023,7 @@ class Helper
         return false;
     }
 
+
     /**
      * Вставка  данных в  таблицу ключ-значение
      *
@@ -1048,6 +1045,7 @@ class Helper
 
     }
 
+
     /**
      * Вставка  данных  в  таблицу  статистики
      *
@@ -1068,18 +1066,21 @@ class Helper
 
     }
 
+
     /**
      * Печать  этикеток     
      *
      * @param array $items  ТМЦ
+     * @param mixed $pqty  явное  указание  количества копий
      * @param array $tags  дополнительные поля
      */
-    public static function printItems(array $items,   array $tags = []) {
+    public static function printItems(array $items, $pqty = 0, array $tags = []) {
         $user = \App\System::getUser();
 
         $printer = \App\System::getOptions('printer');
 
-         
+        $prturn = \App\System::getUser()->prturn;
+
         $htmls = "";
         $rows = [];
         
@@ -1097,7 +1098,6 @@ class Helper
             if(intval($item->item_id) == 0) {
                 continue;
             }
-        
             $header = [];
             $header['turn'] = '';
             if($prturn == 1) {
@@ -1115,10 +1115,13 @@ class Helper
             }
 
             $header['name'] = str_replace("'", "`", $header['name']);
-            
             $header['description'] = str_replace("'", "`", $item->description);
 
             $header['docnumber'] = $tags['docnumber'] ?? "";
+            $header['ocorder'] = $tags['ocorder'] ?? "";
+            $header['paytypename'] = $tags['paytypename'] ?? "";
+            $header['docamount'] = $tags['docamount'] ?? "";
+            $header['isself'] = $tags['isself'] ?? false;
 
             $header['isprice'] = $printer['pprice'] == 1;
             $header['isarticle'] = $printer['pcode'] == 1;
@@ -1128,7 +1131,7 @@ class Helper
 
 
             $header['article'] = $item->item_code;
-            $header['garterm'] = $item->getTerm();
+            $header['garterm'] = $item->warranty;
             $header['country'] = $item->country;
             $header['brand'] = $item->manufacturer;
             $header['notes'] = $item->notes;
@@ -1164,7 +1167,14 @@ class Helper
                 }   
                 $header['barcode'] = $barcode;
                 $header['isbarcode'] = true;                 
-                
+                $months = (int)$item->warranty;
+        
+                    if ($months > 0) {
+                        $garterm = date('d.m.Y', time() + ($months * 30 * 24 * 60 * 60));
+                    } else {
+                        $garterm = 'Не визначено';//номенклатура и журнал печать журнал документов
+                    }
+                    $header['garterm'] = $garterm;
                 if(strlen($barcode) > 0) {
                    if($user->prtypelabel == 0) {
                         try{
@@ -1257,7 +1267,8 @@ class Helper
         }
     }
 
-   
+
+  
     /**
     * "соль" для  шифрования
     */
@@ -1400,7 +1411,6 @@ class Helper
                  
  
     }
- 
     /**
      * выполняет перенос  данных на  новой  версии
      *
@@ -1641,11 +1651,14 @@ class Helper
                      if( strpos($e['Create Table'],'documents_ibfk_1') >0 ){
                          $conn->Execute("ALTER TABLE documents DROP FOREIGN KEY documents_ibfk_1 ");                     
                      }             
+	  
                  }
                   
 
             } catch(\Throwable $ee) {
+		 
                 $logger->error($ee->getMessage());
+			   
             }           
            
         }        

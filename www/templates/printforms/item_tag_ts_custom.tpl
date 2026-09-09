@@ -1,0 +1,40 @@
+!$
+^XA
+^CI33
+^PW240
+^LL160
+^LH5,0
+{{#isweight}}
+^FO0,13
+^A0N,30,30
+^FB240,1,0,C,0
+^FD{{name}}^FS
+^FO0,45
+^A0N,25,25
+^FB240,1,0,C,0
+^FDКількість: {{quantity}}^FS
+^FO65,70
+^BY1,2,50
+^BCN,50,N,N,N
+^FD{{barcode}}^FS
+^FO0,125
+^A0N,25,25
+^FB240,1,0,C,0
+^FDДо: {{garterm}}^FS
+{{/isweight}}
+{{^isweight}}
+^FO0,15
+^A0N,30,30
+^FB240,1,0,C,0
+^FD{{name}}^FS
+^FO65,50
+^BY1,2,50
+^BCN,65,N,N,N
+^FD{{barcode}}^FS
+^FO0,125
+^A0N,25,25
+^FB240,1,0,C,0
+^FDДо: {{garterm}}^FS
+{{/isweight}}
+^XZ
+!$

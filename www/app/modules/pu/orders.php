@@ -37,7 +37,7 @@ class Orders extends \App\Pages\Base
         $statuses = Helper::connect() ;
 
         $this->add(new Form('filter'))->onSubmit($this, 'filterOnSubmit');
-        $this->filter->add(new DropDownChoice('status', $statuses, 'pending'));
+        $this->filter->add(new DropDownChoice('status', $statuses, 'paid'));
 
         $this->add(new DataView('neworderslist', new ArrayDataSource(new Prop($this, '_neworders')), $this, 'noOnRow'));
 
@@ -120,7 +120,8 @@ class Orders extends \App\Pages\Base
             $neworder->headerdata['outnumber'] = $puorder['id'];
             $neworder->headerdata['puorderback'] = 0;
             $neworder->headerdata['salesource'] = $modules['pusalesource'];
-                 
+            $neworder->headerdata['paytypename'] = $puorder->payment_method;
+            $neworder->headerdata['ship_address'] = $puorder['delivery_address'];    
             $neworder->headerdata['puclient'] = $puorder['client_first_name'] . ' ' . $puorder['client_last_name'];
 
             $neworder->amount = H::fa($puorder['price']);
@@ -128,7 +129,9 @@ class Orders extends \App\Pages\Base
 
 
             $neworder->document_date = time();
-            $neworder->notes = "PU номер:{$puorder['id']};";
+/*
+            $neworder->notes = "{$puorder['id']},";
+
             $neworder->notes .= " Клієнт:" .$puorder['client_first_name'] . ' ' . $puorder['client_last_name'].';';
             if (strlen($puorder['email']) > 0) {
                 $neworder->notes .= " Email:" . $puorder['email'] . ";";
@@ -140,38 +143,41 @@ class Orders extends \App\Pages\Base
             if (strlen($puorder['payment_data']['name']) > 0) {
                 $neworder->notes .= " Оплата: " . $puorder['payment_data']['type']." " . $puorder['payment_data']['status'] . "    ;";
             }
-   
+*/   
             if ( is_array($puorder['payment_option']) &&   count($puorder['payment_option']) > 0) {
-                $neworder->notes .= " Оплата: "  ;
-                foreach($puorder['payment_option'] as $o) {
-                   $neworder->notes .= ($puorder['payment_option']['name'] . " ");    
-                }
-               $neworder->notes .=  ";" ; 
+                $neworder->notes .= " Оплата: ";
+                //foreach($puorder['payment_option'] as $o) {
+                   $neworder->notes .= ($puorder['payment_option']['name'] . ", ");    
+                //}
+               $neworder->notes .=  "" ; 
             }            
             
-            
+/*
             if (strlen($puorder['delivery_option']['name']) > 0) {
                 $neworder->notes .= " Доставка:" . $puorder['delivery_option']['name'] . "  " . $puorder['delivery_option']['shipping_service'] . ";";
             }
 
             if (strlen($puorder['delivery_address']) > 0) {
                 $neworder->notes .= " Адреса:" . $puorder['delivery_address'] . ";";
-                $neworder->headerdata['ship_address']   = $puorder['delivery_address'];
             }
-            
-            if (is_array($puorder['delivery_provider_data'])  ) {
+*/            
+            if (is_array($puorder['delivery_provider_data'])) {
+            // \App\Helper::log('Delivery Status: ' . $puorder['delivery_provider_data']['provider']);
+            if ($puorder['delivery_provider_data']['provider'] == 'nova_poshta') {
+                $neworder->headerdata['delivery'] = Document::DEL_NP;
+                $neworder->headerdata['npaddress'] = $puorder['delivery_address'];
+            } elseif ($puorder['delivery_provider_data']['provider'] == 'ukrposhta') {
+                $neworder->headerdata['delivery'] = Document::DEL_UP;
+                $neworder->headerdata['upaddress'] = $puorder['delivery_address'];
+            }
         
-                if($puorder['delivery_provider_data']['provider']=='nova_poshta'){
-                   $neworder->headerdata['delivery'] =  Document::DEL_NP ;
-                   $neworder->headerdata['npaddress'] = $puorder['delivery_address'] ;
-                }
-                 
+
             }
             
             
             
             if (strlen($puorder['client_notes']) > 0) {
-                $neworder->notes .= " Комментар:" . $puorder['client_notes'] . ";";
+                $neworder->notes .= " " . $puorder['client_notes'] . ";";
             }
 
 

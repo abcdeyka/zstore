@@ -1,166 +1,161 @@
 <html>
    <head>
-          <title> Оприбуткування з виробництва</title>
+          <title>Оприбуткування з виробництва</title>
     </head>
     <body>
 
-
-        <form zippy="docform">
-            <h3> Оприбуткування з виробництва </h3>
+        <form zippy="docform" enctype="multipart/form-data">
+            <h3>Оприбуткування з виробництва</h3>
             <div class="row">
                 <div class="col-12 col-md-3">
                     <div class="form-group">
                         <label for="document_number">Номер документа</label>
-                        <input class="form-control" type="text" zippy="document_number"  required="on" >
+                        <input class="form-control" type="text" zippy="document_number" required="on">
                     </div>
-                    <div class="form-group  ">
-                        <label for="store">На склад</label>
+                    <div class="form-group">
+                        <label for="store">Оприходувати на склад</label>
                         <select class="form-control" zippy="store">
                             <option value="0">Не обрано</option>
                         </select>
                     </div>
-                   <div class="form-group  ">
-                        <label data-label="emp" for="emp">Виконавець </label>
-                        <select class="form-control  " zippy="emp">
+                    <div class="form-group">
+                        <label data-label="emp" for="emp">Виконавець</label>
+                        <select class="form-control" zippy="emp">
                             <option value="0">Не вказано</option>
                         </select>
-                        <small data-label="emp"> Для нарахування  зарплати при вiдрядному виробництвi</small>
+                        <small data-label="emp">Для нарахування зарплати при відрядному виробництві</small>
                     </div>                    
-            
                 </div>
                 <div class="col-12 col-md-3">
                     <div class="form-group">
-                        <label for="document_date"> Дата</label>
-                        <input class="form-control" type="text" zippy="document_date"  required="on" >
+                        <label for="document_date">Дата</label>
+                        <input class="form-control" type="text" zippy="document_date" required="on">
                     </div>
 
-                    <div class="form-group  ">
+                    <div class="form-group">
                         <label for="parea">Виробнича ділянка</label>
                         <select class="form-control" zippy="parea">
                             <option value="0">Не обрано</option>
                         </select>
                     </div>
             
-                  <div class="form-group  ">
-                        <label for="notes">Примітка </label>
-
-                        <textarea class="form-control"   zippy="notes"></textarea>
-
+                    <div class="form-group">
+                        <label for="notes">Примітка</label>
+                        <textarea class="form-control" zippy="notes"></textarea>
                     </div>
-
                 </div>
             </div>
+
+            <!-- Новый блок для штрихкода -->
             <div class="row">
                 <div class="col-10">
-                    <a zippy="addrow" class="btn btn-primary  ">Додати позицію</a>
-                    <table class="table  table-sm">
+                    <input placeholder=" х*+артикул" style="width:150px;" autofocus="on" autocomplete="off" type="text" zippy="barcode" onkeydown="onBarCode()">
+                    <a zippy="addcode" class="btn btn-info btn-sm">+</a>
+                    &nbsp; <a zippy="addrow" class="btn btn-info">Додати позицію</a>
+                    <table class="table table-sm">
                         <tr>
-
                             <th>Найменування</th>
                             <th>Код</th>
                             <th>Од.</th>
-                              <th>{{#usesnumber}}Серія, дата{{/usesnumber}}</th>
-                 
-
-                            <th class="text-end">Кіл.</th>
-                            <th class="text-end">Ціна</th>
-
-                            <th class="text-end">Сума</th>
-
-                            <th  ></th>
+                            {{#usesnumber}}
+                            <th>Серія</th>
+                            <th>Дата</th>
+                            {{/usesnumber}}
+                            <th class="text-right">Кіл.</th>
+                            <th class="text-right">Ціна</th>
+                            <th class="text-right">Сума</th>
+                            <th width="50"></th>
                         </tr>
                         <tr zippy="detail">
-
                             <td zippy="item"></td>
                             <td zippy="code"></td>
                             <td zippy="msr"></td>
-                             <td ><span zippy="snumber"></span> <span zippy="sdate" ></span> </td>
-                       
-
-                            <td zippy="quantity" class="text-end"></td>
-                            <td zippy="price" class="text-end"></td>
-
-                            <td zippy="amount" class="text-end"></td>
-
-                            <td><a zippy="edit"><i class="fa fa-edit"></i></a>&nbsp;&nbsp;&nbsp; <a zippy="delete"><i class="fa fa-trash"></i></a>
-                            </td>
+                            {{#usesnumber}}
+                            <td zippy="snumber"></td>
+                            <td zippy="sdate"></td>
+                            {{/usesnumber}}
+                            <td zippy="quantity" class="text-right"></td>
+                            <td zippy="price" class="text-right"></td>
+                            <td zippy="amount" class="text-right"></td>
+                            <td><a zippy="edit"><i class="fa fa-edit"></i></a> <a zippy="delete"><i class="fa fa-trash"></i></a></td>
                         </tr>
                         <tr style="font-weight: bolder;">
-
-                            <td colspan="6" class="text-end">Всього:</td>
-
-
-                            <td zippy="total" class="text-end"></td>
+                            {{^usesnumber}}
+                            <td colspan="5" class="text-right">Всього:</td>
+                            {{/usesnumber}}
+                            {{#usesnumber}}
+                            <td colspan="7" class="text-right">Всього:</td>
+                            {{/usesnumber}}
+                            <td zippy="total" class="text-right"></td>
                             <td></td>
                         </tr>
-
-
                     </table>
-
                 </div>
             </div>
+
             <div class="row">
-                <div class="col-9 d-flex justify-content-end pt-4">
-                    <input type="button" value="Скасувати" zippy="backtolist" class="btn btn-secondary  ms-2 ">
-                    <input zippy="savedoc" type="submit" value="Зберегти" class="btn btn-primary  ms-2 ">
-                    <input zippy="execdoc" type="submit" value="Провести" class="btn btn-success  ms-2 ">
-
-
+                <div class="col-6">
+                    <input type="button" value="Скасувати" zippy="backtolist" class="btn btn-outline-secondary">
+                    <input zippy="savedoc" type="submit" value="Зберегти" class="btn btn-outline-primary">
+                    <input zippy="execdoc" type="submit" value="Провести" class="btn btn-outline-success">
                 </div>
             </div>
 
-
+            <div class="form-group">
+                 <input zippy="importfile" type="file">
+                 &nbsp;<input zippy="import" type="submit" value="Импорт" class="btn btn-outline-info">
+            </div>
         </form>
 
-
         <form zippy="editdetail">
-            <h4>Введення ТМЦ </h4>
-            <small>ТМЦ  має мати тип  Готова продукція обо Напівфабрикат </small>
+            <h4>Введення товару</h4>
             <div class="row">
                 <div class="col-4">
-
-
                     <div class="form-group">
-                        <label for="edititem">Назва </label>
-                        <select class="form-control select2" zippy="edititem">
-                            <option value="1">Не обрано</option>
-                        </select>
-
+                        <label for="edititem">Назва</label>
+                        <input placeholder="Начните вводить..." class="form-control" zippy="edititem"/>
                     </div>
                     {{#usesnumber}}
                     <div class="form-group">
-                        <label for="editsnumber">Серія виробника </label>
-                        <input class="form-control " zippy="editsnumber"/>
-
+                        <label for="editsnumber">Серія виробника</label>
+                        <input class="form-control" zippy="editsnumber"/>
                     </div>
                     <div class="form-group">
-                        <label for="editsdate">Дата випуску серії </label>
-                        <input class="form-control " zippy="editsdate"/>
-
+                        <label for="editsdate">Дата випуску серії</label>
+                        <input class="form-control" zippy="editsdate"/>
                     </div>
                     {{/usesnumber}}
                     <div class="form-group">
                         <label for="editquantity">Кількість</label>
-                        <input class="form-control qtyprice" type="text" zippy="editquantity"  required="on"  pattern="[0-9,\.]+"
-                               style="width: 100px;"/>
+                        <input class="form-control qtyprice" type="text" zippy="editquantity" required pattern="[0-9,\.]+" style="width:100px;"/>
                     </div>
-
-
                     <div class="form-group">
-                        <label for="editprice">Облікова ціна </label>
-                        <input class="form-control qtyprice" type="text" zippy="editprice"  required="on"  pattern="[0-9,\.]+"
-                               style="width: 100px;">
+                        <label for="editprice">Облікова ціна</label>
+                        <input class="form-control qtyprice" type="text" zippy="editprice" required pattern="[0-9,\.]+" style="width:100px;"/>
                     </div>
-
                     <div class="form-group">
-                        <input  type="button" zippy="cancelrow" value="До переліку" class="btn btn-secondary me-2">
-                        <input zippy="saverow" type="submit" value="Зберегти" class="btn btn-primary"> 
-                        
+                        <input zippy="saverow" type="submit" value="Сохранить" class="btn btn-outline-primary">
+                        <input type="button" zippy="cancelrow" value="Отменить" class="btn btn-outline-secondary">
                     </div>
                 </div>
             </div>
         </form>
- 
-     
+
+<script>
+    $(document).ready(function () {
+        if ($('#edititem').length) {
+            $('#edititem').focus();
+        } else {
+            $('#barcode').focus();
+        }
+    });
+
+    function onBarCode(ele) {
+        if (event.key === 'Enter' || event.keyCode == 13) {
+            $('#addcode').click();
+        }
+    }
+</script>
+
     </body>
 </html>

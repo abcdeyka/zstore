@@ -45,26 +45,31 @@ class ProdReceipt extends \App\Pages\Base
         $this->add(new Form('docform'));
         $this->docform->add(new TextInput('document_number'));
         $this->docform->add(new Date('document_date'))->setDate(time());
-        $this->docform->add(new DropDownChoice('parea', \App\Entity\ProdArea::findArray("pa_name", "disabled<>1","pa_name"), 0));
+        $this->docform->add(new DropDownChoice('parea', \App\Entity\ProdArea::findArray("pa_name", ""), 4));
         $this->docform->add(new DropDownChoice('store', Store::getList(), H::getDefStore()));
-
+		
         $this->docform->add(new TextArea('notes'));
         $this->docform->add(new DropDownChoice('emp', \App\Entity\Employee::findArray("emp_name", "disabled<>1", "emp_name"))) ;
-  
+		
         $this->docform->add(new SubmitLink('addrow'))->onClick($this, 'addrowOnClick');
         $this->docform->add(new Button('backtolist'))->onClick($this, 'backtolistOnClick');
         $this->docform->add(new SubmitButton('savedoc'))->onClick($this, 'savedocOnClick');
         $this->docform->add(new SubmitButton('execdoc'))->onClick($this, 'savedocOnClick');
-
+		
+        $this->docform->add(new SubmitButton('import'))->onClick($this, 'importdocOnClick');        
+        $this->docform->add(new \Zippy\Html\Form\File('importfile'));
         $this->docform->add(new Label('total'));
         $this->add(new Form('editdetail'))->setVisible(false);
-        $this->editdetail->add(new DropDownChoice('edititem', Item::findArray('itemname', 'disabled<>1 and  item_type in(4,5)', 'itemname')));
-        $this->editdetail->edititem->onChange($this, 'OnChangeItem' );
-
+        $this->editdetail->add(new AutocompleteTextInput('edititem'))->onText($this, 'OnAutoItem');
+        $this->editdetail->edititem->onChange($this, 'OnChangeItem', true);
+		
         $this->editdetail->add(new TextInput('editquantity'))->setText("1");
         $this->editdetail->add(new TextInput('editprice'));
         $this->editdetail->add(new TextInput('editsnumber'));
         $this->editdetail->add(new Date('editsdate'));
+		$this->docform->add(new TextInput('barcode'));
+		$this->docform->add(new SubmitLink('addcode'))->onClick($this, 'addcodeOnClick');
+
 
         $this->editdetail->add(new Button('cancelrow'))->onClick($this, 'cancelrowOnClick');
         $this->editdetail->add(new SubmitButton('saverow'))->onClick($this, 'saverowOnClick');
@@ -77,14 +82,12 @@ class ProdReceipt extends \App\Pages\Base
             $this->docform->document_date->setDate($this->_doc->document_date);
             $this->docform->parea->setValue($this->_doc->headerdata['parea']);
             $this->docform->emp->setValue($this->_doc->headerdata['emp']);
-
             $this->docform->store->setValue($this->_doc->headerdata['store']);
 
             $this->_itemlist = $this->_doc->unpackDetails('detaildata');
         } else {
             $this->_doc = Document::create('ProdReceipt');
             $this->docform->document_number->setText($this->_doc->nextNumber());
-                  
             if ($basedocid > 0) {  //создание на  основании
                 $basedoc = Document::load($basedocid);
                 if ($basedoc instanceof Document) {
@@ -96,30 +99,26 @@ class ProdReceipt extends \App\Pages\Base
 
                         $this->_itemlist = $basedoc->unpackDetails('detaildata');
                     }
+                }
+                if ($basedoc instanceof Document) {
+                    $this->_basedocid = $basedocid;
                     if ($basedoc->meta_name == 'Order') {
                         $this->docform->notes->setText('Замовлення ' . $basedoc->document_number);
-                        
                         foreach ($basedoc->unpackDetails('detaildata') as $item) {
-                            $item->price = $item->getProdprice($this->_doc->headerdata['store'],"",true);
-                            $this->_itemlist[] = $item;
+                            $item->price = $item->getLastPartion();
+                            $this->_itemlist[$item->item_id] = $item;
+							}
                         }
+				}
+				if ($basedoc->meta_name == 'Task') {
 
-                    }
-                    if ($basedoc->meta_name == 'Task') {
+					$this->docform->notes->setText('Наряд ' . $basedoc->document_number);
+					$this->docform->parea->setValue($basedoc->headerdata['parea']);
 
-                        $this->docform->notes->setText('Наряд ' . $basedoc->document_number);
-                        $this->docform->parea->setValue($basedoc->headerdata['parea']);
-                
-                        foreach ($basedoc->unpackDetails('prodlist') as $item) {
-                          //  $item->price = $item->getProdprice();
-                            $this->_itemlist[] = $item;
-                        }
-                        
-                        $this->docform->emp->setVisible(false);
-                        
+					foreach ($basedoc->unpackDetails('prodlist') as $item) {
+						$item->price = $item->getProdprice();
+						$this->_itemlist[$item->item_id] = $item;
                     }
-              
-                    
                 }
             }
 
@@ -129,14 +128,13 @@ class ProdReceipt extends \App\Pages\Base
                 $this->_doc->headerdata['st_id'] = $st->st_id;
                 $this->_doc->headerdata['pp_id'] = $st->pp_id;
                 $this->docform->notes->setText($st->stagename);
+
                 $this->docform->emp->setVisible(false);
                 $st= \App\Entity\ProdStage::load($st_id);
                 $i=1;
                 foreach($st->itemlist as $it){
                     $item = Item::load($it->item_id) ;
                     $item->quantity = $it->quantity;
-                    $item->price = $it->price;
-                    $item->zarp = $it->zarp;
                     $this->_itemlist[$i++]=$item;
                 }
 
@@ -178,22 +176,98 @@ class ProdReceipt extends \App\Pages\Base
         $this->editdetail->editprice->setText($item->price);
         $this->editdetail->editsnumber->setText($item->snumber);
         $this->editdetail->editsdate->setDate($item->sdate);
+        $this->editdetail->edititem->setKey($item->item_id);
+		
+        $this->editdetail->edititem->setText($item->itemname);
+        $this->_rowid = $item->item_id;
+		
+		
 
-        $this->editdetail->edititem->setValue($item->item_id);
-
-        $this->_rowid =  array_search($item, $this->_itemlist, true);
 
     }
+public function addcodeOnClick($sender) {
+    $codes_text = trim($this->docform->barcode->getText());
+    if ($codes_text == '') {
+        $this->setError("Введіть штрихкод(и)");
+        return;
+    }
+
+    $codes = preg_split('/[^\w\*\x\x{0445}]+/u', $codes_text, -1, PREG_SPLIT_NO_EMPTY);
+
+    foreach ($codes as $raw) {
+        $raw = trim($raw);
+        if ($raw == '') continue;
+
+        $qty = 1;
+        $code = '';
+
+        if (preg_match('/^(\d+)[\*\x\x{0445}](.+)$/u', $raw, $matches)) {
+            $qty = intval($matches[1]);
+            $code = $matches[2];
+        } else {
+            $code = $raw;
+            $qty = 1;
+        }
+
+        $code = trim($code);
+
+        $q = Item::qstr($code);
+        $item = Item::getFirst("bar_code={$q} OR item_code={$q}");
+
+        if ($item == null) {
+            $this->setError("Товар з штрихкодом '{$code}' не знайдено");
+            continue;
+        }
+
+        if ($item->item_type != 4) {
+            $this->setError("Товар '{$item->itemname}' не є готовою продукцією");
+            continue;
+        }
+
+        if ($this->_doc->headerdata['st_id'] > 0) {
+            $st = \App\Entity\ProdStage::load($this->_doc->headerdata['st_id']);
+            if (count($st->itemlist) > 0) {
+                $ids = array_keys($st->itemlist);
+                if (!in_array($item->item_id, $ids)) {
+                    $this->setError("ТМЦ {$item->itemname} не в перелiку на етапi");
+                    continue;
+                }
+            }
+        }
+
+        $item->price = $item->getProdprice();
+        $item->snumber = '';
+        $item->sdate = '';
+
+        if (isset($this->_itemlist[$item->item_id])) {
+            $this->_itemlist[$item->item_id]->quantity += $qty;
+        } else {
+            $item->quantity = $qty;
+            $this->_itemlist[$item->item_id] = $item;
+        }
+
+        // Вывод уведомления через встроенный метод
+        $this->setSuccess("Додано: {$item->itemname} Кількість: {$qty} шт");
+    }
+
+    $this->docform->barcode->setText('');
+    $this->calcTotal();
+    $this->docform->detail->Reload();
+}
+
+
+
+
+
+
 
     public function deleteOnClick($sender) {
         if (false == \App\ACL::checkEditDoc($this->_doc)) {
             return;
         }
         $item = $sender->owner->getDataItem();
-        $rowid =  array_search($item, $this->_itemlist, true);
-
-        $this->_itemlist = array_diff_key($this->_itemlist, array($rowid => $this->_itemlist[$rowid]));
-
+        // unset($this->_itemlist[$item->item_id]);
+        $this->_itemlist = array_diff_key($this->_itemlist, array($item->item_id => $this->_itemlist[$item->item_id]));
         $this->calcTotal();
         $this->docform->detail->Reload();
     }
@@ -201,7 +275,7 @@ class ProdReceipt extends \App\Pages\Base
     public function addrowOnClick($sender) {
         $this->editdetail->setVisible(true);
         $this->docform->setVisible(false);
-        $this->_rowid = -1;
+        $this->_rowid = 0;
     }
 
     public function saverowOnClick($sender) {
@@ -210,11 +284,9 @@ class ProdReceipt extends \App\Pages\Base
         }
 
 
-        $id = $this->editdetail->edititem->getValue();
-  
-        $item = Item::load($id);
+        $id = $this->editdetail->edititem->getKey();
 
-        if ($item == null) {
+        if ($id == 0) {
             $this->setError("Не обрано товар");
             return;
         }
@@ -235,6 +307,8 @@ class ProdReceipt extends \App\Pages\Base
             
         }
 
+        $item = Item::load($id);
+
         $item->quantity = $this->editdetail->editquantity->getDouble();
         $item->price = $this->editdetail->editprice->getDouble();
         if ($item->price == 0) {
@@ -250,19 +324,35 @@ class ProdReceipt extends \App\Pages\Base
             return;
         }
 
-        if($this->_rowid == -1) {
-            $this->_itemlist[] = $item;
+
+        $tarr = array();
+
+        foreach ($this->_itemlist as $k => $value) {
+
+            if ($this->_rowid > 0 && $this->_rowid == $k) {
+                $tarr[$item->item_id] = $item;    // заменяем
         } else {
-            $this->_itemlist[$this->_rowid] = $item;
+                $tarr[$k] = $value;    // старый
+            }
         }
 
+        if ($this->_rowid == 0) {        // в конец
+            $tarr[$item->item_id] = $item;
+        }
+        $this->_itemlist = $tarr;
+        $this->_rowid = 0;
 
+        $this->editdetail->setVisible(false);
+        $this->docform->setVisible(true);
+        $this->docform->detail->Reload();
+        $this->calcTotal();
         //очищаем  форму
-        $this->editdetail->edititem->setValue(0);
+        $this->editdetail->edititem->setKey(0);
+        $this->editdetail->edititem->setText('');
 
         $this->editdetail->editquantity->setText("1");
 
-        $this->editdetail->editprice->setText("0");
+        $this->editdetail->editprice->setText("");
         $this->editdetail->editsnumber->setText("");
         $this->editdetail->editsdate->setText("");
     }
@@ -390,14 +480,77 @@ class ProdReceipt extends \App\Pages\Base
         App::RedirectBack();
     }
 
+    public function OnAutoItem($sender) {
+   
+        $text = trim($sender->getText());
+        $like  = Item::qstr('%'.$text.'%');
+        
+        return Item::findArray("itemname","  disabled <> 1 and  item_type  in (4,5)     and  (itemname like {$like} or item_code like {$like}   or   bar_code like {$like} )");
+    }   
     public function OnChangeItem($sender) {
-        $id = $sender->getValue();
+        $id = $sender->getKey();
         $item = \App\Entity\Item::load($id);
 
         $price = $item->getProdprice();
         $this->editdetail->editprice->setText($price > 0 ? H::fa($price) : '');
 
-
     }
 
+    //импорт  с  ексель
+    public function importdocOnClick($sender) {
+        $file = $this->docform->importfile->getFile();
+        
+        if (strlen($file['tmp_name']) == 0) {
+
+            $this->setError('Не выбран файл');
+            return;
+        }
+
+        $data = array();
+        $oSpreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($file['tmp_name']); 
+
+
+        $oCells = $oSpreadsheet->getActiveSheet()->getCellCollection();
+
+        for ($iRow =2; $iRow <= $oCells->getHighestRow(); $iRow++) {
+            $row = array();
+            for ($iCol = 'A'; $iCol <= $oCells->getHighestColumn(); $iCol++) {
+                $oCell = $oCells->get($iCol . $iRow);
+                if ($oCell) {
+                    $row[$iCol] = $oCell->getValue();
+                }
+            }
+            $data[$iRow] = $row;
+        }
+        unset($oSpreadsheet);
+       
+        foreach ($data as $row) {
+          // if(strlen($row['A'])==0) continue;
+           if(strlen($row['B'])==0) continue;
+           $code = Item::qstr($row['B']);
+           $item = Item::getFirst(" item_code = {$code}");
+           if($item==null) {
+               
+               $item = new  Item() ;
+               $item->itemname = $row['A'] ;
+               $item->item_code = $row['B'] ;
+             //  $item->save() ;
+               H::log("Не найден  артикул ".$code)  ;
+               continue;   
+           }
+           
+
+           $item->quantity = $row['D'];
+          
+           $item->price = $item->getProdprice();
+ 
+           $this->_itemlist[$item->item_id] = $item;
+            
+        }
+       
+        $this->docform->detail->Reload();
+        
+    }
+    
+    
 }

@@ -94,7 +94,9 @@ class GoodsIssue extends \App\Pages\Base
         }
         $this->docform->add(new DropDownChoice('fop', $fops,0))->setVisible(count($fops)>0) ;
 
-       
+        $cp = \App\Session::getSession()->clipboard;
+        $this->docform->add(new ClickLink('paste', $this, 'onPaste'))->setVisible(is_array($cp) && count($cp) > 0);
+
         $this->docform->add(new SubmitLink('addrow'))->onClick($this, 'addrowOnClick');
         $this->docform->add(new SubmitButton('savedoc'))->onClick($this, 'savedocOnClick');
         $this->docform->add(new SubmitButton('execdoc'))->onClick($this, 'savedocOnClick');
@@ -398,7 +400,39 @@ class GoodsIssue extends \App\Pages\Base
         if (false == \App\ACL::checkShowDoc($this->_doc)) {
             return;
         }
-
+        
+        //автозакрытие заказа самовывоз
+        $delivery = $basedoc->headerdata['delivery'] ?? null;
+        $ocorder  = $basedoc->headerdata['ocorder'] ?? 0;
+        $puorder  = $basedoc->headerdata['puorder'] ?? 0;   // <-- промовский заказ
+        
+        //\App\Helper::log("OC обработка: delivery = {$delivery}, ocorder = {$ocorder}, puorder = {$puorder}");
+        
+        if ($ocorder > 0) {
+            if ($delivery == 1) {
+                // Смена статуса в OC только для самовывоза
+                $modules = \App\System::getOptions("modules");
+                \App\Modules\OCStore\Helper::connect();
+        
+                $elist = [ $ocorder => 5 ]; // 5 — целевой статус самовывоза
+                $data  = json_encode($elist);
+                $fields = [ 'data' => $data ];
+                $url = $modules['ocsite'] . '/index.php?route=api/zstore/updateorder&' 
+                     . \App\System::getSession()->octoken;
+        
+                $json   = \App\Modules\OCStore\Helper::do_curl_request($url, $fields);
+                $result = json_decode($json, true);
+            }
+        }
+        
+        // Автопроводка для заказов с OC и Prom
+        if ($basedocid > 0 && $basedoc->meta_name == 'Order') {
+            if ($ocorder > 0 || $puorder > 0) {
+                // \App\Helper::log("Выполняется автопроводка документа ID {$basedocid}, ocorder={$ocorder}, puorder={$puorder}.");
+                $this->savedocOnClick($this->docform->execdoc);
+            }
+        }
+		
 
     }
 
@@ -827,7 +861,7 @@ class GoodsIssue extends \App\Pages\Base
             if (false == \App\ACL::checkShowReg('GIList', false)) {
                 App::RedirectHome() ;
             } else {
-                App::Redirect("\\App\\Pages\\Register\\GIList", $this->_doc->document_id);
+                App::Redirect("\\App\\Pages\\Register\\OrderList");
             }
 
 
@@ -1134,7 +1168,29 @@ class GoodsIssue extends \App\Pages\Base
 
     }
 
-   
+    public function onPaste($sender) {
+        $store_id = $this->docform->store->getValue();
+
+        $cp = \App\Session::getSession()->clipboard;
+
+        foreach ($cp as $it) {
+            $item = Item::load($it->item_id);
+            if ($item == null) {
+                continue;
+            }
+            $item->quantity = 1;
+            $item->price = $item->getPrice($this->docform->pricetype->getValue(), $store_id);
+
+            $this->_itemlist[$item->item_id] = $item;
+        }
+        $this->_rownumber  = 1;
+
+        $this->docform->detail->Reload();
+
+        $this->calcTotal();
+        $this->calcPay();
+    }
+
 
    
          

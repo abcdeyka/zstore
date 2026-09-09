@@ -1,81 +1,162 @@
 <html>
-   <head>
-        <title> Стан складiв   </title>
+<head>
+    <title>Стан складiв</title>
+</head>
 
-    </head>
-    <body>
-        <div class="row">
-            <div class="col-12   ">
-                <h3>Стан складiв</h3>
-                <small>Кiлькiсть ТМЦ на складах</small>
-                <div class="navbar">
-                    <form zippy="filter"  >
-                        <div class="row  ">
-                         <div class="col-auto  pt-2">  
-                         <div class="form-check    ">
-                            <input class="form-check-input" type="checkbox" zippy="fcust">
-                            <label class="form-check-label" for="fcust">
-                               Кастомнi поля
+<body>
+<div class="container-fluid py-2">
+    <div class="row">
+        <div class="col-12">
+
+            <h3 class="mb-0">Стан складiв</h3>
+            <small class="text-muted">Кiлькiсть ТМЦ на складах</small>
+
+            <div class="mt-3">
+                <form zippy="filter">
+
+                    <div class="row g-2 align-items-center">
+
+                        <!-- ПОИСК -->
+                        <div class="col-12 col-md-auto">
+                            <input autocomplete="off"
+                                   placeholder="Iм'я або код..."
+                                   class="form-control"
+                                   type="text"
+                                   onkeydown="onSearch()"
+                                   zippy="searchkey">
+                        </div>
+
+                        <!-- КАСТОМНІ ПОЛЯ -->
+                        <div class="col-6 col-md-auto">
+                            <div class="form-check">
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       zippy="fcust">
+                                <label class="form-check-label">
+                                    Кастомнi поля
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- В МІНУСІ -->
+                        <div class="col-6 col-md-auto">
+                            <div class="form-check">
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       zippy="fminus">
+                                <label class="form-check-label">
+                                    В мiнусi
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- МЕНШЕ МІНІМУМА -->
+                        <div class="col-6 col-md-auto">
+                            <div class="form-check">
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       zippy="fmin">
+                                <label class="form-check-label">
+                                    Менше мiн.
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- ВСІ -->
+                        <div class="col-6 col-md-auto">
+                            <div class="form-check">
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       zippy="fall">
+                                <label class="form-check-label">
+                                    Всi
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- ВЕРТИКАЛЬНИЙ РЕЖИМ -->
+                        <div class="col-12 col-md-auto">
+                            <div class="form-check">
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       zippy="fver">
+                                <label class="form-check-label">
+                                    Вертикальний режим
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- КАТЕГОРІЯ -->
+                        <div class="col-12 col-md-auto">
+                            <label class="form-label mb-0">
+                                Категорiя
                             </label>
                         </div>
-                        </div>
-                          <div class="col-auto   pt-2">
-                         <div class="form-check    ">
-                            <input class="form-check-input" type="checkbox" zippy="fminus">
-                            <label class="form-check-label" for="fminus">
-                               В мiнусi
-                            </label>
-                        </div>
-                        </div>
-                         <div class="col-auto  pt-2 ">
-                       <div class="form-check   ">
-                            <input class="form-check-input" type="checkbox" zippy="fmin">
-                            <label class="form-check-label" for="fmin">
-                                Менше мiн.
-                            </label>
-                        </div>
-                        </div>
-                         <div class="col-auto   pt-2">
-                         <div class="form-check    ">
-                            <input class="form-check-input" type="checkbox" zippy="fver">
-                            <label class="form-check-label" for="fver">
-                                Вертикальний режим
-                            </label>
-                        </div>  
-                        </div>  
-                                              
-                        <label class="col-form-label col-auto" for="searchcat">категорiя</label>
-                          <div class="col-auto  ">
-                            <select class="form-control ms-sm-2" zippy="searchcat">
+
+                        <!-- СПИСОК КАТЕГОРІЙ -->
+                        <div class="col-12 col-md-auto">
+                            <select class="form-select"
+                                    zippy="searchcat">
                                 <option value="0">Не вказано</option>
-                            </select>    
-                         </div>             
-                         <div class="col-auto  ">       
-                           <input class="btn btn-primary  " type="submit" value="ОК">
-                         </div>
-                       </div>
-                    </form>
-                </div>
+                            </select>
+                        </div>
 
-                
-                <div zippy="detail">
-                    <div>
-                        <a style="cursor:pointer" onclick=" $('#preview').printThis();" title="Друк"><i class="fa fa-print me-2"></i></a>
-                        <a href="/index.php?p=App/Pages/ShowReport&arg=xls/storeitems" target="_blank" title="Експорт в Excel"><i class="fa fa-file-excel me-2"></i></a>
-                        <a href="/index.php?p=App/Pages/ShowReport&arg=pdf/storeitems" target="_blank" title="Експорт в PDF"><i class="fa fa-file-pdf me-2"></i> </a>
+                        <!-- КНОПКА ОК -->
+                        <div class="col-12 col-md-auto">
+                            <input class="btn btn-primary w-100"
+                                   type="submit"
+                                   value="ОК">
+                        </div>
 
                     </div>
 
-
-                    <div  class="table-responsive-lg mt-2" zippy="preview"  >
-                 
-                    </div>
-
-                </div>
+                </form>
             </div>
+
+            <div zippy="detail" class="mt-3">
+
+                <!-- КНОПКИ -->
+                <div class="d-flex gap-3 align-items-center mb-2">
+
+                    <a style="cursor:pointer"
+                       onclick="$('#preview').printThis();"
+                       title="Друк">
+                        <i class="fa fa-print fa-lg"></i>
+                    </a>
+
+                    <a href="/index.php?p=App/Pages/ShowReport&arg=xls/storeitems"
+                       target="_blank"
+                       title="Експорт в Excel">
+                        <i class="fa fa-file-excel fa-lg"></i>
+                    </a>
+
+                    <a href="/index.php?p=App/Pages/ShowReport&arg=pdf/storeitems"
+                       target="_blank"
+                       title="Експорт в PDF">
+                        <i class="fa fa-file-pdf fa-lg"></i>
+                    </a>
+
+                </div>
+
+                <!-- ТАБЛИЦА -->
+                <div class="table-responsive mt-2"
+                     style="overflow-x:auto;"
+                     zippy="preview">
+                </div>
+
+            </div>
+
         </div>
-        
- 
-    </body>
+    </div>
+</div>
+
+<script>
+function onSearch(ele) {
+    if (event.key === 'Enter' || event.keyCode == 13) {
+        $('#filter').Submit();
+    }
+}
+</script>
+
+</body>
 </html>
-                

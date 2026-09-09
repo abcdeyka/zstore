@@ -29,7 +29,12 @@ class Order extends \App\Entity\Doc\Document
                 $detail[] = array("no"         => $i++,
                                   "tovar_name" => $item->itemname,
                                   "tovar_code" => $item->item_code,
-                                  "quantity"   => H::fqty($item->quantity),
+                                  "quantity"   => (strpos((string)$item->quantity, '.') !== false) 
+												? rtrim(rtrim((string)$item->quantity, '0'), '.') 
+												: intval($item->quantity),
+								"weight"     => (intval((float)$item->weight * $item->quantity) == (float)$item->weight * $item->quantity)
+												? intval((float)$item->weight * $item->quantity)
+												: number_format((float)$item->weight * $item->quantity, 1, '.', ''),
                                   "price"      => H::fa($item->price),
                                   "msr"        => $item->msr,
                                   "desc"       => $item->desc,
@@ -92,8 +97,10 @@ class Order extends \App\Entity\Doc\Document
         );                                                                               
         $header['outnumber'] = strlen($this->headerdata['outnumber']??'') > 0 ? $this->headerdata['outnumber'] : false;
 
-
-
+        $mf= \App\Entity\MoneyFund::load($this->headerdata["payment"]);
+        if($mf != null)  {
+            $header['payment_name']  = $mf->mf_name;     
+        } 
 
         $report = new \App\Report('doc/order.tpl');
 
@@ -301,16 +308,16 @@ class Order extends \App\Entity\Doc\Document
             return;
         }  
         $conn = \ZDB\DB::getConnect();
+
+        if($this->getHD('dostore',0) ==0 )  {
+            return;  //не проводить  по  складу, резерв не чіпаємо
+        }
+
         $conn->Execute("delete from entrylist where tag=".Entry::TAG_RESERV." and document_id =" . $this->document_id);
-        
-        
+
+
         $cnt = intval( $conn->GetOne("select count(*) from entrylist where document_id = " . $this->document_id)   );
         if($cnt>0)  return;
-        
-       
-        if($this->getHD('dostore',0) ==0 )  {
-            return;  //не проводить  по  складу
-        }
        
  
         $am =   $this->getAmountReg()   ;

@@ -46,7 +46,7 @@ class IOState extends \ZCL\DB\Entity
      public const TYPE_PROD             = 68;    // прямые производственные  затраты
   //   public const TYPE_ADVANCEREP       = 69;    // Подотчет сотрудниу
 
-    //внебалансовые расходы (для  статиcтики)   
+    //внебалансовые расходы (для  статистики)   
     public const TYPE_LOST             = 80;     //потери при инвентаризации
     public const TYPE_TRASH            = 81;     //отходы производства
     public const TYPE_OUTEQ            = 82;    // списание ОС
@@ -120,7 +120,7 @@ class IOState extends \ZCL\DB\Entity
         if ($type == 2 ||   $type == 0  ) {
             $list[self::TYPE_BASE_OUTCOME] = "Витрати на закупку";
             $list[self::TYPE_COMMON_OUTCOME] = "Загальновиробничі витрати";
-            $list[self::TYPE_PROD] = "Витрати на виробьництво";
+            $list[self::TYPE_PROD] = "Витрати на виробництво";
             $list[self::TYPE_ADMIN_OUTCOME] = "Адміністративні витрати";
             $list[self::TYPE_SALE_OUTCOME] = "Витрати на збут";
             $list[self::TYPE_SALARY_OUTCOME] = "Витрати на зарплату";
@@ -151,7 +151,7 @@ class IOState extends \ZCL\DB\Entity
             $list[self::TYPE_LOST] = "Втрати при інвентаризації";
             $list[self::TYPE_TRASH] = "Відходи виробництва";
             $list[self::TYPE_OVER] = "Надлишки при інвентаризації";
-            $list[self::TYPE_BEGIN] = "Внесення початкових залишкiв";
+            $list[self::TYPE_BEGIN] = "Внесення початкових залишків";
            
         }
 
@@ -197,7 +197,7 @@ class IOState extends \ZCL\DB\Entity
 
        $list[self::TYPE_FIN] = "Доходи від фінансових операцій";
        $list[self::TYPE_OTHER_INCOME] = "Інші доходи";
-       $list[self::TYPE_BEGIN] = "Внесення початкових залишкiв";
+       $list[self::TYPE_BEGIN] = "Внесення початкових залишків";
        
        return $list;
     }

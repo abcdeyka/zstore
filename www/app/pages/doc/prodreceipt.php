@@ -226,7 +226,7 @@ class ProdReceipt extends \App\Pages\Base
                $ids= array_keys($st->itemlist) ; 
                
                if(!in_array($item->item_id,$ids)) {
-                    $this->setError( "ТМЦ не в перелiку  на  етапi");
+                    $this->setError( "ТМЦ не в переліку  на  етапі");
                     return;
           
                }
@@ -366,7 +366,7 @@ class ProdReceipt extends \App\Pages\Base
             $this->docform->document_number->setText($next);
             $this->_doc->document_number = $next;
             if (strlen($next) == 0) {
-                $this->setError('Не створено унікальный номер документа');
+                $this->setError('Не створено унікальний номер документа');
             }
         }
         if (count($this->_itemlist) == 0) {

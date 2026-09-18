@@ -116,7 +116,7 @@ class Order extends  Base
         $table->AddColumn(new \Zippy\Html\DataList\Column('bar_code', "Штрих-код", true, true, false));
         $table->AddColumn(new \Zippy\Html\DataList\Column('manufacturer', "Бренд", true, true, false));
         if($this->_tvars["isff"]==true ) {
-           $table->AddColumn(new \Zippy\Html\DataList\Column('onstore', "На складi", false, true, false,'text-end','text-end'));
+           $table->AddColumn(new \Zippy\Html\DataList\Column('onstore', "На складі", false, true, false,'text-end','text-end'));
         }
         $table->setCellClickEvent($this, 'OnSelect');
 
@@ -457,7 +457,7 @@ class Order extends  Base
             $this->docform->document_number->setText($next);
             $this->_doc->document_number = $next;
             if (strlen($next) == 0) {
-                $this->setError('Не створено унікальный номер документа');
+                $this->setError('Не створено унікальний номер документа');
             }
         }
         if (count($this->_tovarlist) == 0) {
@@ -496,7 +496,7 @@ class Order extends  Base
         $qty=$item->getQuantity();
         
         if(doubleval($qty) <= 0 ) {
-            $this->setWarn('Товару  немає  на  складi') ;
+            $this->setWarn('Товару  немає  на  складі') ;
         }
     }
    

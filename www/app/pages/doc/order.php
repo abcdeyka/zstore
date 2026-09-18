@@ -700,7 +700,7 @@ class Order extends \App\Pages\Base
             $this->docform->document_number->setText($next);
             $this->_doc->document_number = $next;
             if (strlen($next) == 0) {
-                $this->setError('Не створено унікальный номер документа');
+                $this->setError('Не створено унікальний номер документа');
             }
         }
         if (count($this->_tovarlist) == 0) {
@@ -738,10 +738,10 @@ class Order extends \App\Pages\Base
         $qty = $item->getQuantity() ; 
         if($store>0) {
            $oq = $item->getQuantity() ;
-           $qtymdg= "На  складi ". H::fqty( $qty) .", на iнших складах ". H::fqty($oq - $qty);    
+           $qtymdg= "На  складі ". H::fqty( $qty) .", на інших складах ". H::fqty($oq - $qty);    
            
         }   else {
-           $qtymdg= "Наявнiсть: ".  H::fqty($qty );    
+           $qtymdg= "Наявність: ".  H::fqty($qty );    
         }
         
         

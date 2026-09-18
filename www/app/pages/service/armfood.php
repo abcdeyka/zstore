@@ -502,7 +502,7 @@ class ARMFood extends \App\Pages\Base
         foreach($tlist as $prod) {
             
             $status="";
-            if($prod->foodstate==1 )   $status="В черзi";
+            if($prod->foodstate==1 )   $status="В черзі";
             if($prod->foodstate==2 )   $status="Готується";
             if($prod->foodstate==3 )   $status="Готово";
             if($prod->foodstate==4 )   $status="Видано";
@@ -634,7 +634,7 @@ class ARMFood extends \App\Pages\Base
         foreach($tlist as $prod) {
             
             $status="";
-            if($prod->foodstate==1 )   $status="В черзi";
+            if($prod->foodstate==1 )   $status="В черзі";
             if($prod->foodstate==2 )   $status="Готується";
             if($prod->foodstate==3 )   $status="Готово";
             if($prod->foodstate==4 )   $status="Видано";
@@ -1058,7 +1058,7 @@ class ARMFood extends \App\Pages\Base
 
         $state="Новий";
         if ($item->foodstate == 1) {
-            $state="В черзi";
+            $state="В черзі";
         }
         if ($item->foodstate == 2) {
             $state="Готується";
@@ -1121,7 +1121,7 @@ class ARMFood extends \App\Pages\Base
 
         $state="Новий";
         if ($item->foodstate == 1) {
-            $state="В черзi";
+            $state="В черзі";
         }
         if ($item->foodstate == 2) {
             $state="Готується";
@@ -1508,7 +1508,7 @@ class ARMFood extends \App\Pages\Base
         }
         
         if($inprod==0) {
-            $this->setWarn('Нема  позицiй для виробництва') ;
+            $this->setWarn('Нема  позицій для виробництва') ;
             return;
         }
        
@@ -1835,7 +1835,7 @@ class ARMFood extends \App\Pages\Base
                   foreach($stlst as $st) {
                       if(trim($st)=='')  continue;
                       if(\App\Entity\Excise::checkFormat($st) ==false){
-                         $this->setWarn("Невiрний формат марки " . $st);
+                         $this->setWarn("Невірний формат марки " . $st);
                          return; 
                       }
                       $exists=\App\Entity\Excise::checkUsed($st) ;
@@ -1845,12 +1845,12 @@ class ARMFood extends \App\Pages\Base
                       }
                   }
                   if(count($stlst)  !=  count(array_unique($stlst) ) ) {
-                     $this->setWarn("Марки дублюются" );
+                     $this->setWarn("Марки дублюються" );
                      return;  
                   }           
                   
                   if(count($stlst)  !=  $item->quantity) {
-                     $this->setWarn("Кількість марок не  відповідае кількості в  позиції " );
+                     $this->setWarn("Кількість марок не  відповідає кількості в  позиції " );
                      return;  
                   }
               }
@@ -1895,7 +1895,7 @@ class ARMFood extends \App\Pages\Base
                 $next = $this->_doc->nextNumber();
                 $this->_doc->document_number = $next;
                 if (strlen($next) == 0) {
-                    $this->setError('Не створено унікальный номер документа');
+                    $this->setError('Не створено унікальний номер документа');
                     return false;
                 }
             }
@@ -2040,7 +2040,7 @@ class ARMFood extends \App\Pages\Base
             } else {
                 $b= $customer->getBonus();
                 if($b>0) {
-                    $this->docpanel->listsform->custinfo->setText("Бонусiв {$b}");
+                    $this->docpanel->listsform->custinfo->setText("Бонусів {$b}");
                 }
             }
 

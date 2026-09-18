@@ -125,7 +125,7 @@ class RetCustIssue extends \App\Pages\Base
                             $i->price = $i->price * $rate;
                             $this->_itemlist[]=$i;
                         }
-                        $this->docform->notes->setText("Пiдстава ".$basedoc->document_number);
+                        $this->docform->notes->setText("Підстава ".$basedoc->document_number);
 
 
                     }
@@ -418,7 +418,7 @@ class RetCustIssue extends \App\Pages\Base
             $this->docform->document_number->setText($next);
             $this->_doc->document_number = $next;
             if (strlen($next) == 0) {
-                $this->setError('Не створено унікальный номер документа');
+                $this->setError('Не створено унікальний номер документа');
             }
         }
         if (count($this->_itemlist) == 0) {

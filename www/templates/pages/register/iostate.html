@@ -1,16 +1,16 @@
 <html>
      <head>
-        <title> Журнал прибуткiв та видаткiв  </title>
+        <title> Журнал прибутків та видатків  </title>
 
     </head>
   <body>      
         <div class="row">
             <div class="col-12  ">
 
-                <h3>Журнал прибуткiв та видаткiв</h3>
+                <h3>Журнал прибутків та видатків</h3>
                 <b> <i class="fa fa-repeat"></i>
                   {{^bmode}}
-                 <a zippy="bmode">Режим Книги облiку прибуткiв та видаткiв</a> <small data-label="bmode">Для системи загального оподаткування</small>
+                 <a zippy="bmode">Режим Книги обліку прибутків та видатків</a> <small data-label="bmode">Для системи загального оподаткування</small>
                   {{/bmode}}
                    {{#bmode}}
                  <a zippy="jmode">Режим повного журналу</a>
@@ -80,7 +80,7 @@
             <div class="col-12 col-md-8 col-xl-6">
 
                   {{#bmode}} 
-                     <small><i class="fa fa-exclamation-triangle"></i> Редагування впливає тільки на  формування  книги. Оригінальні документи і касові опперації не  змінюються</small>
+                     <small><i class="fa fa-exclamation-triangle"></i> Редагування впливає тільки на  формування  книги. Оригінальні документи і касові операції не  змінюються</small>
                   {{/bmode}} 
                 <br>
                   {{^bmode}} 
@@ -120,7 +120,7 @@
                             <a zippy="show" title="Перегляд"><i class="fa fa-eye"></i></a>
                              {{#bmode}} 
                              &nbsp;&nbsp;
-                             <a href="javascript:void(0) " zippy="edit" title="Редагувти" ><i class="fa fa-edit  "></i></a>
+                             <a href="javascript:void(0) " zippy="edit" title="Редагувати" ><i class="fa fa-edit  "></i></a>
                             &nbsp;&nbsp;&nbsp;&nbsp;
                              <a zippy="delete" title="Видалити"><i class="fa fa-trash text-danger"></i></a>
                              {{/bmode}} 

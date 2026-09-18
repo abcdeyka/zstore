@@ -372,7 +372,7 @@ class IncomeItem extends \App\Pages\Base
             $this->docform->document_number->setText($next);
             $this->_doc->document_number = $next;
             if (strlen($next) == 0) {
-                $this->setError('Не створено унікальный номер документа');
+                $this->setError('Не створено унікальний номер документа');
             }
         }
         if (count($this->_itemlist) == 0) {
@@ -452,7 +452,7 @@ class IncomeItem extends \App\Pages\Base
             
             $temp_array = array_unique($list);
             if(sizeof($temp_array) < sizeof($list)) {
-                $this->setError("Cерійний номер має бути унікальним для виробу");    
+                $this->setError("Серійний номер має бути унікальним для виробу");    
                 return;
             }           
             

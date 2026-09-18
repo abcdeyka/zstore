@@ -135,7 +135,7 @@ class Admin extends \App\Pages\Base
         }
         $conn->Execute($sql.$where);
         */
-        $where = " where meta_name in( 'AccountList','AccountEntryList','AccountActivity','ManualEntry','ObSaldo','Shahmatka','FinReportSmall','FinResult') or  menugroup= ".$conn->qstr('Бухоблiк');
+        $where = " where meta_name in( 'AccountList','AccountEntryList','AccountActivity','ManualEntry','ObSaldo','Shahmatka','FinReportSmall','FinResult') or  menugroup= ".$conn->qstr('Бухоблiк')  /* latin i: so it is stored in metadata.menugroup */;
       
         if($options['useacc']==1) {
             $sql="update metadata set  disabled=0 ";
@@ -225,7 +225,7 @@ class Admin extends \App\Pages\Base
      
         $doc =  \App\Entity\doc\Document::getFirst("document_number=".$dn);
         if($doc==null){
-            $this->setError("Документ не знвйдено")  ;
+            $this->setError("Документ не знайдено")  ;
             return;
         }
         if($doc->state <5){
@@ -248,7 +248,7 @@ class Admin extends \App\Pages\Base
 
             return;
         }
-        $this->setSuccess("Документ скасoвано")  ;
+        $this->setSuccess("Документ скасовано")  ;
          
     }        
 

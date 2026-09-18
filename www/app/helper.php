@@ -1020,7 +1020,8 @@ class Helper
     public static function getKeyValBool($key): bool {
 
         $ret = self::getKeyVal($key);
-        if($ret == true || $ret == "true" || $ret == "TRUE" || $ret == 1 || $ret == "1") {
+        //нестрогий $ret == true вважав істиною будь-який непорожній рядок, зокрема "false"
+        if($ret === true || in_array($ret, [1, '1', 'true', 'TRUE'], true)) {
             return true;
         }
 

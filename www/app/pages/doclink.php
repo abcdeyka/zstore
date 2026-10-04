@@ -18,9 +18,15 @@ class Doclink extends \Zippy\Html\WebPage
         
         $conn= \ZDB\db::getConnect()  ;
         $hash = trim((string)$hash);    
-        $hash = $conn->qstr('%'.$hash.'%') ;
+        //только полный код ссылки
+        if(strlen($hash) < 16 || !preg_match('~^[a-z0-9+=/]+$~', $hash)) {
+            header("HTTP/1.0 404 Not Found");
+            die;
+        }
+        $h1 = $conn->qstr('%<hash><![CDATA['.$hash.']]></hash>%') ;
+        $h2 = $conn->qstr('%<hash>'.$hash.'</hash>%') ;
         
-        $id = intval( $conn->GetOne(" select document_id from documents where content like ".$hash) );
+        $id = intval( $conn->GetOne(" select document_id from documents where content like {$h1} or content like {$h2} ") );
         
         $doc = Document::load((int)$id) ;
         if ($doc == null) {

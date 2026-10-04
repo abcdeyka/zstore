@@ -41,14 +41,17 @@ class Helper
         }
 
 
-        if($user->userpass == $password) {
-            return $user;
+        //пароль только  строкой
+        if(!is_string($password) || strlen($password) == 0) {
+            return null;
         }
-        if(strlen($password) > 0) {
+        //в  базе хеш
+        if(!empty(password_get_info((string)$user->userpass)['algo'])) {
             $b = password_verify($password, $user->userpass);
             return $b ? $user : null;
         }
-        return null;
+        //старый пароль открытым  текстом
+        return hash_equals((string)$user->userpass, $password) ? $user : null;
     }
 
     /**
